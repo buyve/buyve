@@ -1,0 +1,100 @@
+.scroll-stack-scroller {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scroll-stack-inner {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  padding: 0 2rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scroll-stack-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  max-width: 600px;
+  min-height: 200px;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  
+  /* Neobrutalism styling */
+  background: oklch(25% 0 0);
+  border: 2px solid black;
+  box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+  color: white;
+  border-radius: 0px;
+  
+  /* 스택 효과 - 기본적으로 뒤쪽에 스케일 작게 */
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -50%) scale(0.85) translateY(20px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+/* 현재 활성 카드 */
+.scroll-stack-card-active {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translate(-50%, -50%) scale(1) translateY(0px) !important;
+  z-index: 10 !important;
+}
+
+/* 이전 카드들 (스택 아래쪽) */
+.scroll-stack-card-completed {
+  opacity: 0.6 !important;
+  visibility: visible !important;
+  transform: translate(-50%, -50%) scale(0.9) translateY(-15px) !important;
+  z-index: 5 !important;
+}
+
+/* 다음 카드들 (숨김) */
+.scroll-stack-card-upcoming {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: translate(-50%, -50%) scale(0.85) translateY(20px) !important;
+  z-index: 1 !important;
+}
+
+@media (max-width: 768px) {
+  .scroll-stack-card {
+    padding: 1rem;
+    min-height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .scroll-stack-card {
+    padding: 0.75rem;
+    min-height: 120px;
+  }
+}
+
+.scroll-stack-end {
+  height: 20vh;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .scroll-stack-end {
+    height: 15vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .scroll-stack-end {
+    height: 10vh;
+  }
+}
