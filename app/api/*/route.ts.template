@@ -1,0 +1,3 @@
+// Vercel 배포 시 각 API 라우트에 추가
+export const runtime = 'nodejs'; // Edge Runtime 대신 Node.js 사용
+export const dynamic = 'force-dynamic'; // 동적 렌더링 강제
