@@ -1,0 +1,518 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.2393 0 0);
+  --secondary-background: oklch(100% 0 0);
+  --foreground: oklch(0% 0 0);
+  --main-foreground: oklch(0% 0 0);
+  --main: oklch(78.57% 0.1422 180.36);
+  --border: oklch(0% 0 0);
+  --ring: oklch(0% 0 0);
+  --overlay: oklch(0% 0 0 / 0.8);
+  --shadow: 4px 4px 0px 0px var(--border);
+  --chart-1: #00D6BD;
+  --chart-2: #0099FF;
+  --chart-3: #7A83FF;
+  --chart-4: #FF4D50;
+  --chart-5: #FACC00;
+  --chart-active-dot: #000;
+}
+
+.dark {
+  --background: oklch(22.65% 0.0236 198.49);
+  --secondary-background: oklch(23.93% 0 0);
+  --foreground: oklch(92.49% 0 0);
+  --main-foreground: oklch(0% 0 0);
+  --main: oklch(71.47% 0.129261 180.4742);
+  --border: oklch(0% 0 0);
+  --ring: oklch(100% 0 0);
+  --shadow: 4px 4px 0px 0px var(--border);
+  --chart-1: #00BDA7;
+  --chart-2: #008AE5;
+  --chart-3: #7A83FF;
+  --chart-4: #FF6669;
+  --chart-5: #E0B700;
+  --chart-active-dot: #fff;
+}
+
+@theme inline {
+  --color-main: var(--main);
+  --color-background: var(--background);
+  --color-secondary-background: var(--secondary-background);
+  --color-foreground: var(--foreground);
+  --color-main-foreground: var(--main-foreground);
+  --color-border: var(--border);
+  --color-overlay: var(--overlay);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --spacing-boxShadowX: 4px;
+  --spacing-boxShadowY: 4px;
+  --spacing-reverseBoxShadowX: -4px;
+  --spacing-reverseBoxShadowY: -4px;
+  --radius-base: 0px;
+  --shadow-shadow: var(--shadow);
+  --font-weight-base: 500;
+  --font-weight-heading: 900;
+}
+  
+/* Satoshi 폰트 정의 */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Light.otf') format('opentype');
+  font-weight: 300;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-LightItalic.otf') format('opentype');
+  font-weight: 300;
+  font-display: swap;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Italic.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-MediumItalic.otf') format('opentype');
+  font-weight: 500;
+  font-display: swap;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Black.otf') format('opentype');
+  font-weight: 900;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-BlackItalic.otf') format('opentype');
+  font-weight: 900;
+  font-display: swap;
+  font-style: italic;
+}
+
+/* Google Fonts 폰트 클래스 정의 */
+.comfortaa {
+  font-family: "Comfortaa", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
+
+.bitcount-grid-double {
+  font-family: "Bitcount Grid Double", system-ui;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings:
+    "slnt" 0,
+    "CRSV" 0.5,
+    "ELSH" 0,
+    "ELXP" 0;
+}
+
+.satoshi {
+  font-family: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+@layer base {
+  html {
+    overflow-x: hidden;
+    font-family: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  
+  body {
+    @apply text-foreground font-base bg-background;
+    overflow-x: hidden;
+    position: relative;
+    /* 모바일에서 바운스 스크롤 방지 */
+    overscroll-behavior: none;
+    /* iOS Safari에서 줌 방지 */
+    touch-action: manipulation;
+    font-family: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  
+  /* 트레이딩 페이지에서만 모바일 스크롤 방지 */
+  @media (max-width: 1023px) {
+    /* 트레이딩 페이지에서만 스크롤 방지 */
+    body.trade-page {
+      height: 100%;
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+    }
+    
+    /* 모바일 고정 요소들의 안정성 보장 */
+    .mobile-navbar,
+    .mobile-trade-drawer,
+    .mobile-putter {
+      position: fixed !important;
+      /* iOS Safari에서 고정 위치 문제 해결 */
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      will-change: transform;
+    }
+  }
+
+  h1, h2, h3, h4, h5, h6{
+    @apply font-heading;
+  }
+
+
+  /* 네오브루탈리즘 스타일 강화 */
+  button, .btn, [type="button"], [type="submit"] {
+    border-width: 2px;
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--main);
+    color: var(--main-foreground);
+    border-radius: var(--radius-base);
+    font-weight: var(--font-weight-heading);
+    transition: filter 0.1s;
+  }
+  button:active, .btn:active {
+    filter: brightness(0.95);
+  }
+
+  input, textarea, select {
+    border-width: 2px;
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--secondary-background);
+    color: var(--foreground);
+    border-radius: var(--radius-base);
+    font-weight: var(--font-weight-base);
+  }
+
+  .badge {
+    border-width: 2px;
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+    background: var(--main);
+    color: var(--main-foreground);
+    border-radius: var(--radius-base);
+    font-weight: var(--font-weight-heading);
+  }
+}
+
+/* 반응형 레이아웃 스타일 */
+@layer components {
+  /* Desktop Layout (≥1024px) */
+  .desktop-layout {
+    @apply hidden lg:flex lg:flex-col lg:overflow-hidden lg:bg-background;
+    /* PCNavbar 70px를 고려한 상단 마진과 높이 조정 */
+    margin-top: 70px; /* PCNavbar 높이만큼 아래로 밀어냄 */
+    height: calc(100vh - 70px);
+    padding: 16px; /* p-4를 명시적으로 16px로 */
+    gap: 16px; /* gap-4를 명시적으로 16px로 */
+  }
+  
+  .desktop-navbar {
+    @apply w-full h-16 px-6 flex items-center justify-between bg-secondary-background border-2 border-border shadow-[var(--shadow)];
+    border-radius: 0px;
+    flex-shrink: 0; /* Navbar 크기 고정 */
+  }
+  
+  .desktop-main {
+    @apply flex flex-row;
+    gap: 16px; /* gap-4를 명시적으로 16px로 */
+    flex: 1 1 0%; /* flex-1을 명시적으로 설정 */
+    min-height: 0; /* flexbox 오버플로우 방지 */
+    /* 정확한 높이 계산: 전체 높이에서 navbar(64px) + padding(32px) + gap(16px) 제외 */
+    height: calc(100vh - 70px - 64px - 32px - 16px);
+  }
+  
+  .desktop-chat-area {
+    @apply bg-secondary-background border-2 border-border shadow-[var(--shadow)];
+    border-radius: 0px;
+    flex: 1 1 0%; /* 나머지 공간을 모두 차지 */
+    min-width: 0; /* flexbox 축소 허용 */
+    min-height: 0; /* flexbox 자식 요소가 제대로 작동하도록 */
+    display: flex;
+    flex-direction: column;
+    /* 정확한 높이 설정 */
+    height: 100%;
+  }
+  
+  .desktop-trade-panel {
+    @apply bg-secondary-background border-2 border-border shadow-[var(--shadow)];
+    border-radius: 0px;
+    width: 316px; /* 268px + 좌우패딩 24px씩 = 316px */
+    flex-shrink: 0; /* 축소되지 않도록 고정 */
+    min-height: 0; /* flexbox 오버플로우 방지 */
+    overflow: hidden; /* 내부 스크롤 관리 */
+    display: flex;
+    flex-direction: column;
+    /* 정확한 높이 설정 */
+    height: 100%;
+  }
+
+  /* Mobile Layout (<1024px) - 모든 간격을 12px로 통일 */
+  .mobile-layout {
+    @apply flex lg:hidden flex-col overflow-hidden bg-background;
+    height: 100dvh; /* Dynamic viewport height만 사용 */
+    padding: 12px;
+    /* 하단 고정 요소들을 위한 여백: mobile-putter(60px) + trade-drawer(144px) + 간격들(36px) */
+    padding-bottom: calc(60px + 144px + 36px); /* 240px */
+    gap: 12px;
+  }
+  
+  .mobile-navbar {
+    @apply w-full h-14 flex items-center justify-between border-2 border-border border-b-4 border-b-black shadow-[var(--shadow)] fixed z-50;
+    background-color: oklch(23.93% 0 0);
+    border-radius: 0px;
+    padding: 0 12px;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+  }
+  
+  .mobile-main {
+    @apply flex flex-col flex-1 min-h-0;
+    gap: 12px;
+    /* 모든 간격을 12px로 통일 */
+  }
+  
+  .mobile-chat-area {
+    @apply flex-1 flex flex-col;
+    /* 스타일 중복 제거 - ChatAreaBody에서 처리 */
+    min-height: 0;
+  }
+  
+  .mobile-trade-drawer {
+    @apply border-2 border-border fixed z-20;
+    background-color: oklch(0.2393 0 0);
+    height: 144px;
+    border-radius: 0px;
+    left: 12px;
+    right: 12px;
+    bottom: 84px; /* mobile-putter(60px) + 간격(12px) + 여백(12px) = 84px */
+    overflow: hidden;
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+    box-shadow: 4px 4px 0px 0px rgba(0,0,0,1); /* 4px 그림자 효과 */
+  }
+  
+  .mobile-putter {
+    @apply h-[60px] flex justify-around items-center border-2 border-black shadow-[var(--shadow)] fixed z-30;
+    background-color: oklch(0.2393 0 0);
+    border-radius: 0px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+  }
+
+  /* Chat Components */
+  .chat-tabs {
+    @apply px-3 pt-3 pb-0;
+  }
+  
+  .chat-messages {
+    @apply p-3 bg-white;
+    /* flex-1을 명시적으로 설정 */
+    flex: 1 1 0%;
+    /* 스크롤 강제 활성화 */
+    overflow-y: scroll !important; /* auto에서 scroll로 변경하고 !important 추가 */
+    overflow-x: hidden !important;
+    /* 모바일 터치 스크롤 개선 */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    /* 스크롤을 위한 기본 설정 */
+    min-height: 0;
+    overflow-anchor: none;
+    /* 높이 제한 제거 - flex가 알아서 계산하도록 */
+  }
+  
+  .chat-messages > * {
+    margin-bottom: 0.75rem; /* 메시지 간격 */
+  }
+  
+  .chat-messages > *:last-child {
+    margin-bottom: 0; /* 마지막 메시지는 하단 마진 제거 */
+  }
+  
+  .chat-input-area {
+    @apply p-3 border-t;
+    border-top: 2px solid var(--border);
+    /* 모바일에서 입력 영역 고정 */
+    flex-shrink: 0;
+  }
+  
+  .chat-bubble {
+    @apply max-w-fit px-4 py-3 rounded-lg border-2 border-border shadow-[var(--shadow)];
+  }
+  
+  .chat-bubble-buy {
+    @apply bg-main text-main-foreground;
+  }
+  
+  .chat-bubble-sell {
+    @apply bg-red-500 text-white;
+  }
+
+  /* Trade Panel Components */
+  .trade-toggle-buttons {
+    @apply flex gap-2 p-4;
+  }
+  
+  .trade-amount-input {
+    @apply p-4;
+  }
+  
+  .trade-presets {
+    @apply flex gap-2 p-4 flex-wrap;
+  }
+  
+  .trade-advanced {
+    @apply flex gap-2 p-4;
+  }
+
+  /* Navbar Components */
+  .navbar-logo {
+    @apply font-bold text-xl tracking-wider select-none;
+  }
+  
+  .navbar-center {
+    @apply flex-1 mx-4 max-w-md;
+  }
+  
+  .navbar-right {
+    @apply flex items-center gap-2;
+  }
+
+  /* 유틸리티 클래스 */
+  .neobrutalism-card {
+    @apply border-2 border-border bg-background rounded shadow-[var(--shadow)];
+  }
+  
+  .neobrutalism-button {
+    @apply border-2 border-border bg-main text-main-foreground rounded font-bold shadow-[var(--shadow)] transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none active:translate-x-1 active:translate-y-1 active:shadow-none;
+  }
+  
+  .neobrutalism-input {
+    @apply border-2 border-border bg-secondary-background text-foreground;
+    box-shadow: var(--shadow);
+  }
+}
+
+/* 모바일 트레이드 드로어 내부 요소 스타일 정리 */
+.mobile-trade-drawer input {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.mobile-trade-drawer input:focus,
+.mobile-trade-drawer input:focus-visible {
+  box-shadow: none !important;
+  outline: none !important;
+  ring: none !important;
+}
+
+/* 검색 사이드바 전용 스타일 */
+.search-sidebar {
+  /* 완전히 독립적인 고정 위치 */
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9999 !important;
+  /* 사이드바 자체는 overflow hidden */
+  overflow: hidden;
+  /* 기존 레이아웃에 영향을 주지 않도록 */
+  margin: 0 !important;
+  padding: 0 !important;
+  /* 애니메이션 추가 */
+  transform: translateX(0);
+  transition: transform 0.3s ease-in-out;
+}
+
+.search-sidebar-content {
+  /* 스크롤 가능한 영역만 스크롤 활성화 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  /* 정확한 높이 계산 */
+  height: calc(100vh - 140px); /* 헤더와 푸터 제외 */
+}
+
+/* 사이드바 오버레이 */
+.search-sidebar-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9998 !important;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+/* 스크롤바 숨기기 */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
