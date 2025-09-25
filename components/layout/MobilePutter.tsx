@@ -595,7 +595,7 @@ export default function MobilePutter() {
           style={{ boxShadow: 'none', border: 'none', background: 'transparent' }}
         >
           <img 
-            src="/logo.svg" 
+            src="/landingpage/images/buyve2.svg" 
             alt="Logo" 
             className="w-8 h-8"
             style={{ 
