@@ -19,11 +19,40 @@ type Props = {
   roomId: string;
 };
 
+const MEMO_BYTE_LIMIT = 120;
+
+function truncateMemoByBytes(memo: string, limit = MEMO_BYTE_LIMIT) {
+  const encoder = new TextEncoder();
+  const memoBytes = encoder.encode(memo);
+
+  if (memoBytes.byteLength <= limit) {
+    return memo;
+  }
+
+  const ellipsis = '...';
+  const ellipsisBytes = encoder.encode(ellipsis);
+  const allowedBytes = Math.max(limit - ellipsisBytes.byteLength, 0);
+
+  let truncated = '';
+  let usedBytes = 0;
+
+  for (const char of memo) {
+    const charBytes = encoder.encode(char);
+    if (usedBytes + charBytes.byteLength > allowedBytes) {
+      break;
+    }
+    truncated += char;
+    usedBytes += charBytes.byteLength;
+  }
+
+  return `${truncated}${ellipsis}`;
+}
+
 // Memo instruction creation function
 function createMemoInstruction(memo: string, signer: PublicKey) {
-  // 메모 크기 제한 (200바이트로 제한하여 트랜잭션 크기 문제 방지)
-  const truncatedMemo = memo.length > 200 ? memo.substring(0, 200) + '...' : memo;
-  
+  // 메모를 바이트 단위로 제한하여 트랜잭션 크기 증가를 방지
+  const truncatedMemo = truncateMemoByBytes(memo);
+
   return new TransactionInstruction({
     keys: [{ pubkey: signer, isSigner: true, isWritable: false }],
     programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
