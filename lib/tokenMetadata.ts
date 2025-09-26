@@ -1,11 +1,13 @@
 'use client';
 
-import { 
+import {
   findMetadataPda,
   fetchMetadata
 } from '@metaplex-foundation/mpl-token-metadata';
 import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
 import { publicKey } from '@metaplex-foundation/umi';
+import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
+import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { tokenMetadataCache } from './tokenMetadataCache';
 
 // 🌟 Solana 토큰 메타데이터 인터페이스
@@ -39,6 +41,93 @@ export class TokenMetadataError extends Error {
     super(message);
     this.name = 'TokenMetadataError';
   }
+}
+
+function sanitizeString(value?: string | null): string {
+  return value ? value.replace(/\0/g, '').trim() : '';
+}
+
+async function fetchJsonMetadata(uri: string, tokenAddress: string) {
+  const apiUrl = `/api/token-metadata?uri=${encodeURIComponent(uri)}`;
+  const response = await fetch(apiUrl);
+
+  if (!response.ok) {
+    throw new TokenMetadataError(
+      `Failed to fetch JSON metadata: ${response.status}`,
+      tokenAddress,
+      'json'
+    );
+  }
+
+  return response.json();
+}
+
+function isMetadataAccountNotFound(error: unknown): boolean {
+  if (!error) return false;
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('was not found') || message.includes('Account does not exist');
+}
+
+async function fetchToken2022Metadata(
+  connection: Connection,
+  mintPublicKey: PublicKey,
+  tokenAddress: string
+): Promise<TokenMetadata | null> {
+  const parsedAccount = await connection.getParsedAccountInfo(mintPublicKey);
+  const account = parsedAccount.value;
+
+  const ownerAddress = typeof account?.owner === 'string'
+    ? account.owner
+    : account?.owner?.toBase58?.();
+
+  if (!account || ownerAddress !== TOKEN_2022_PROGRAM_ID.toBase58()) {
+    return null;
+  }
+
+  const accountData = account.data;
+  if (!accountData || typeof accountData === 'string' || Array.isArray(accountData)) {
+    return null;
+  }
+
+  if (!('parsed' in accountData)) {
+    return null;
+  }
+
+  const parsed = (accountData as ParsedAccountData).parsed as any;
+  const extensions = parsed?.info?.extensions;
+
+  if (!Array.isArray(extensions)) {
+    return null;
+  }
+
+  const metadataExtension = extensions.find((ext: any) => ext.extension === 'tokenMetadata');
+  if (!metadataExtension?.state) {
+    return null;
+  }
+
+  const uri = sanitizeString(metadataExtension.state.uri);
+  if (!uri) {
+    return null;
+  }
+
+  const jsonMetadata = await fetchJsonMetadata(uri, tokenAddress);
+
+  const name = sanitizeString(metadataExtension.state.name) || sanitizeString(parsed?.info?.name);
+  const symbol = sanitizeString(metadataExtension.state.symbol) || sanitizeString(parsed?.info?.symbol);
+
+  const result: TokenMetadata = {
+    mint: tokenAddress,
+    name: name || tokenAddress,
+    symbol,
+    description: jsonMetadata.description,
+    image: jsonMetadata.image,
+    attributes: jsonMetadata.attributes,
+    external_url: jsonMetadata.external_url,
+    animation_url: jsonMetadata.animation_url,
+    properties: jsonMetadata.properties
+  };
+
+  return result;
 }
 
 /**
@@ -96,48 +185,53 @@ async function fetchTokenMetadataFromChain(
   try {
     // RPC URL 설정
     const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || 'https://solana-mainnet.g.alchemy.com/v2/CLIspK_3J2GVAuweafRIUoHzWjyn07rz';
-    
+    const connection = new Connection(rpcUrl, 'confirmed');
+
     // UMI 인스턴스 생성
     const umi = createUmi(rpcUrl);
     
-    // 토큰 주소를 UMI PublicKey로 변환
-    const mintPublicKey = publicKey(tokenAddress);
+    // 토큰 주소 PublicKey 생성
+    const mintPublicKeyUmi = publicKey(tokenAddress);
+    const mintPublicKey = new PublicKey(tokenAddress);
+
+    // Token-2022 메타데이터 확장 우선 시도
+    const token2022Metadata = await fetchToken2022Metadata(connection, mintPublicKey, tokenAddress);
+    if (token2022Metadata) {
+      return token2022Metadata;
+    }
 
     // 메타데이터 PDA 계산
-    const metadataAddress = findMetadataPda(umi, { mint: mintPublicKey });
+    const metadataAddress = findMetadataPda(umi, { mint: mintPublicKeyUmi });
 
     // 메타데이터 조회
-    const metadata = await fetchMetadata(umi, metadataAddress[0]);
+    let metadata;
+    try {
+      metadata = await fetchMetadata(umi, metadataAddress[0]);
+    } catch (error) {
+      if (isMetadataAccountNotFound(error)) {
+        return null;
+      }
 
-    // URI에서 JSON 메타데이터 조회
-    if (!metadata.uri) {
-      return null;
-    }
-    
-    // CORS 문제를 해결하기 위해 우리의 API 엔드포인트 사용
-    const apiUrl = `/api/token-metadata?uri=${encodeURIComponent(metadata.uri)}`;
-    const response = await fetch(apiUrl);
-    
-    if (!response.ok) {
       throw new TokenMetadataError(
-        `Failed to fetch JSON metadata: ${response.status}`,
+        `Failed to fetch on-chain metadata: ${error instanceof Error ? error.message : 'Unknown'}`,
         tokenAddress,
-        'json'
+        'metadata'
       );
     }
 
-    const jsonMetadata = await response.json();
+    const uri = sanitizeString(metadata.uri);
+    if (!uri) {
+      return null;
+    }
 
-    // 이미지 URL을 그대로 사용 (검증은 TokenAvatar에서 처리)
-    const imageUrl = jsonMetadata.image;
+    const jsonMetadata = await fetchJsonMetadata(uri, tokenAddress);
 
-    // 결과 반환
     const result: TokenMetadata = {
       mint: tokenAddress,
-      name: metadata.name.replace(/\0/g, '').trim(), // null bytes 제거
-      symbol: metadata.symbol.replace(/\0/g, '').trim(),
+      name: sanitizeString(metadata.name) || tokenAddress,
+      symbol: sanitizeString(metadata.symbol),
       description: jsonMetadata.description,
-      image: imageUrl,
+      image: jsonMetadata.image,
       attributes: jsonMetadata.attributes,
       external_url: jsonMetadata.external_url,
       animation_url: jsonMetadata.animation_url,

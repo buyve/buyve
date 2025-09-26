@@ -20,11 +20,39 @@ import { confirmTransactionHybrid, createAlchemyConnection, getConfirmationStats
 // 🎯 수수료 설정 (Jupiter API에서 자동 처리)
 const FEE_RECIPIENT_ADDRESS = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
 
+const MEMO_BYTE_LIMIT = 120;
+
+function truncateMemoByBytes(memo: string, limit = MEMO_BYTE_LIMIT): string {
+  const encoder = new TextEncoder();
+  const memoBytes = encoder.encode(memo);
+
+  if (memoBytes.byteLength <= limit) {
+    return memo;
+  }
+
+  const ellipsis = '...';
+  const ellipsisBytes = encoder.encode(ellipsis);
+  const allowedBytes = Math.max(limit - ellipsisBytes.byteLength, 0);
+
+  let truncated = '';
+  let usedBytes = 0;
+
+  for (const char of memo) {
+    const charBytes = encoder.encode(char);
+    if (usedBytes + charBytes.byteLength > allowedBytes) {
+      break;
+    }
+    truncated += char;
+    usedBytes += charBytes.byteLength;
+  }
+
+  return `${truncated}${ellipsis}`;
+}
+
 // 🎯 메모 인스트럭션 생성 헬퍼 함수
 function createMemoInstruction(memo: string, signer: PublicKey): TransactionInstruction {
-  // 메모 크기 제한 (200바이트로 제한하여 트랜잭션 크기 문제 방지)
-  const truncatedMemo = memo.length > 200 ? memo.substring(0, 200) + '...' : memo;
-  
+  const truncatedMemo = truncateMemoByBytes(memo);
+
   return new TransactionInstruction({
     keys: [{ pubkey: signer, isSigner: true, isWritable: false }],
     programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'), // Memo Program ID
