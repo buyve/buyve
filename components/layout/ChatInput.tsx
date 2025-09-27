@@ -9,11 +9,12 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TOKENS, formatTokenAmount } from '@/lib/tokens';
-import { Connection, Transaction, TransactionInstruction, PublicKey, SystemProgram } from '@solana/web3.js';
+import { Connection, Transaction, TransactionInstruction, PublicKey } from '@solana/web3.js';
 
 // 🎯 Fee settings
 const FEE_RECIPIENT_ADDRESS = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
 const FEE_RATE = 0.0069; // 0.69%
+const PLATFORM_FEE_BPS = Math.round(FEE_RATE * 10000); // 69 bps
 
 type Props = {
   roomId: string;
@@ -58,18 +59,6 @@ function createMemoInstruction(memo: string, signer: PublicKey) {
     programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
     data: Buffer.from(truncatedMemo, 'utf8'),
   });
-}
-
-// 🎯 Fee instruction addition function
-function addFeeInstruction(transaction: Transaction, fromPubkey: PublicKey, feeAmount: number) {
-  const feeInstruction = SystemProgram.transfer({
-    fromPubkey: fromPubkey,
-    toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
-    lamports: feeAmount,
-  });
-  
-  // Add fee instruction to the front of transaction
-  transaction.instructions.unshift(feeInstruction);
 }
 
 export default function ChatInput({ roomId }: Props) {
@@ -261,7 +250,7 @@ export default function ChatInput({ roomId }: Props) {
       toast.loading("Getting quote...", { id: 'swap' });
       
       const quoteRes = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=${tokenPairInfo.inputMint}&outputMint=${tokenPairInfo.outputMint}&amount=${amount}&slippageBps=${slippageBps}`
+        `https://quote-api.jup.ag/v6/quote?inputMint=${tokenPairInfo.inputMint}&outputMint=${tokenPairInfo.outputMint}&amount=${amount}&slippageBps=${slippageBps}&platformFeeBps=${PLATFORM_FEE_BPS}`
       );
       const quote = await quoteRes.json();
       
@@ -280,6 +269,7 @@ export default function ChatInput({ roomId }: Props) {
           userPublicKey: publicKey.toBase58(),
           asLegacyTransaction: true,
           prioritizationFeeLamports: priorityFeeLamports, // Presets priority fee applied
+          feeAccount: FEE_RECIPIENT_ADDRESS,
         }),
       });
       const swapData = await swapRes.json();
@@ -299,22 +289,6 @@ export default function ChatInput({ roomId }: Props) {
               // 2) Decode received swapTransaction (Transaction)
       const swapTxBuf = Buffer.from(swapData.swapTransaction, 'base64');
       const transaction = Transaction.from(swapTxBuf);
-
-              // 🎯 Fee processing (applied to both Buy/Sell modes)
-      let feeAmount = 0;
-      
-      if (settings.mode === 'buy') {
-                  // Buy mode: Calculate fee based on input SOL amount
-          const solAmount = quantity; // already in SOL units
-          feeAmount = Math.floor(solAmount * FEE_RATE * 1e9); // convert to lamports
-        
-      } else {
-        // Sell mode: fee calculation based on output SOL amount
-        const expectedOutputSol = parseFloat(formatTokenAmount(quote.outAmount, 9)); // SOL has 9 decimals
-        feeAmount = Math.floor(expectedOutputSol * FEE_RATE * 1e9); // convert to lamports
-      }
-      
-      addFeeInstruction(transaction, publicKey, feeAmount);
 
               // Replace with latest blockhash (including retry logic)
       toast.loading("Connecting to blockchain...", { id: 'swap' });
