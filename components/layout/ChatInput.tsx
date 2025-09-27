@@ -9,7 +9,15 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TOKENS, formatTokenAmount } from '@/lib/tokens';
-import { Connection, Transaction, TransactionInstruction, PublicKey } from '@solana/web3.js';
+import {
+  AddressLookupTableAccount,
+  Connection,
+  PublicKey,
+  Transaction,
+  TransactionInstruction,
+  TransactionMessage,
+  VersionedTransaction,
+} from '@solana/web3.js';
 
 // 🎯 Fee settings
 const FEE_RECIPIENT_ADDRESS = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
@@ -21,6 +29,7 @@ type Props = {
 };
 
 const MEMO_BYTE_LIMIT = 120;
+const PACKET_DATA_SIZE_LIMIT = 1232; // Solana message size soft limit for packets
 
 function truncateMemoByBytes(memo: string, limit = MEMO_BYTE_LIMIT) {
   const encoder = new TextEncoder();
@@ -267,7 +276,6 @@ export default function ChatInput({ roomId }: Props) {
         body: JSON.stringify({
           quoteResponse: quote,
           userPublicKey: publicKey.toBase58(),
-          asLegacyTransaction: true,
           prioritizationFeeLamports: priorityFeeLamports, // Presets priority fee applied
           feeAccount: FEE_RECIPIENT_ADDRESS,
         }),
@@ -288,7 +296,68 @@ export default function ChatInput({ roomId }: Props) {
 
               // 2) Decode received swapTransaction (Transaction)
       const swapTxBuf = Buffer.from(swapData.swapTransaction, 'base64');
-      const transaction = Transaction.from(swapTxBuf);
+      let isVersionedSwap = false;
+      let legacyTransaction: Transaction | null = null;
+      let versionedTransaction: VersionedTransaction | null = null;
+      let lookupTableAccounts: AddressLookupTableAccount[] = [];
+      let versionedOriginalInstructions: TransactionInstruction[] = [];
+      let legacyOriginalInstructions: TransactionInstruction[] = [];
+
+      try {
+        const possibleVersioned = VersionedTransaction.deserialize(swapTxBuf);
+        if (possibleVersioned.version !== 'legacy') {
+          isVersionedSwap = true;
+          versionedTransaction = possibleVersioned;
+        } else {
+          legacyTransaction = Transaction.from(swapTxBuf);
+          legacyOriginalInstructions = [...legacyTransaction.instructions];
+        }
+      } catch (parseError) {
+        try {
+          legacyTransaction = Transaction.from(swapTxBuf);
+          legacyOriginalInstructions = [...legacyTransaction.instructions];
+        } catch (legacyError) {
+          throw new Error(
+            `Failed to parse swap transaction: ${legacyError instanceof Error ? legacyError.message : String(legacyError)}`
+          );
+        }
+      }
+
+      if (isVersionedSwap && versionedTransaction) {
+        const tableAddressSet = new Set<string>();
+
+        for (const lookup of versionedTransaction.message.addressTableLookups) {
+          tableAddressSet.add(lookup.accountKey.toBase58());
+        }
+
+        if (Array.isArray(swapData.lookupTableAddresses)) {
+          for (const address of swapData.lookupTableAddresses as string[]) {
+            tableAddressSet.add(address);
+          }
+        }
+
+        if (tableAddressSet.size > 0) {
+          const fetchedTables = await Promise.all(
+            Array.from(tableAddressSet).map(async (address) => {
+              const lookup = await connection.getAddressLookupTable(new PublicKey(address));
+              if (!lookup.value) {
+                throw new Error(`Missing address lookup table: ${address}`);
+              }
+              return lookup.value;
+            })
+          );
+
+          lookupTableAccounts = fetchedTables;
+        }
+
+        const decompiledMessage = TransactionMessage.decompile(
+          versionedTransaction.message,
+          lookupTableAccounts.length
+            ? { addressLookupTableAccounts: lookupTableAccounts }
+            : undefined
+        );
+        versionedOriginalInstructions = [...decompiledMessage.instructions];
+      }
 
               // Replace with latest blockhash (including retry logic)
       toast.loading("Connecting to blockchain...", { id: 'swap' });
@@ -327,12 +396,52 @@ export default function ChatInput({ roomId }: Props) {
         throw new Error('Failed to retrieve blockhash');
       }
 
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey; // explicitly specify if not set
+      const memoInstruction = memoText ? createMemoInstruction(memoText, publicKey) : null;
+      let transactionForSigning: VersionedTransaction | Transaction;
+      const auxiliaryInstructions: TransactionInstruction[] = [];
 
-      // 3) Add memo instruction (using saved memo text)
-      if (memoText) {
-        transaction.add(createMemoInstruction(memoText, publicKey));
+      if (isVersionedSwap && versionedTransaction) {
+        let messageForSwap = new TransactionMessage({
+          payerKey: publicKey,
+          recentBlockhash: blockhash,
+          instructions: versionedOriginalInstructions,
+        }).compileToV0Message(
+          lookupTableAccounts.length ? lookupTableAccounts : undefined
+        );
+
+        if (memoInstruction) {
+          const candidateMessage = new TransactionMessage({
+            payerKey: publicKey,
+            recentBlockhash: blockhash,
+            instructions: [...versionedOriginalInstructions, memoInstruction],
+          }).compileToV0Message(
+            lookupTableAccounts.length ? lookupTableAccounts : undefined
+          );
+
+          if (candidateMessage.serialize().length < PACKET_DATA_SIZE_LIMIT) {
+            messageForSwap = candidateMessage;
+          } else {
+            auxiliaryInstructions.push(memoInstruction);
+          }
+        }
+
+        transactionForSigning = new VersionedTransaction(messageForSwap);
+      } else if (legacyTransaction) {
+        legacyTransaction.instructions = [...legacyOriginalInstructions];
+
+        if (memoInstruction) {
+          legacyTransaction.add(memoInstruction);
+          if (legacyTransaction.serializeMessage().length >= PACKET_DATA_SIZE_LIMIT) {
+            legacyTransaction.instructions.pop();
+            auxiliaryInstructions.push(memoInstruction);
+          }
+        }
+
+        legacyTransaction.recentBlockhash = blockhash;
+        legacyTransaction.feePayer = publicKey; // explicitly specify if not set
+        transactionForSigning = legacyTransaction;
+      } else {
+        throw new Error('Failed to prepare swap transaction');
       }
 
       // Calculate and display swap information
@@ -343,12 +452,42 @@ export default function ChatInput({ roomId }: Props) {
       toast.loading(`Executing swap... ${inputAmount} ${tokenPairInfo.inputTokenInfo.symbol} → ${outputAmount} ${tokenPairInfo.outputTokenInfo.symbol}`, { id: 'swap' });
 
       // 4) Sign and send transaction (using same connection)
-      const signedTransaction = await signTransaction(transaction);
+      const signedTransaction = await signTransaction(
+        transactionForSigning as Parameters<typeof signTransaction>[0]
+      );
       const txId = await stableConnection.sendRawTransaction(signedTransaction.serialize(), {
         skipPreflight: false,
         preflightCommitment: 'finalized', // use same commitment as blockhash
         maxRetries: 3,
       });
+
+      let auxiliaryTxId: string | null = null;
+
+      if (auxiliaryInstructions.length > 0) {
+        try {
+          const auxiliaryTransaction = new Transaction();
+          auxiliaryTransaction.add(...auxiliaryInstructions);
+          auxiliaryTransaction.recentBlockhash = blockhash;
+          auxiliaryTransaction.feePayer = publicKey;
+
+          const signedAuxiliaryTransaction = await signTransaction(
+            auxiliaryTransaction as Parameters<typeof signTransaction>[0]
+          );
+
+          auxiliaryTxId = await stableConnection.sendRawTransaction(
+            signedAuxiliaryTransaction.serialize(),
+            {
+              skipPreflight: false,
+              preflightCommitment: 'finalized',
+              maxRetries: 3,
+            }
+          );
+
+          console.debug('Auxiliary transaction sent', auxiliaryTxId);
+        } catch (auxError) {
+          console.error('Auxiliary transaction failed', auxError);
+        }
+      }
 
       // 5) Transaction confirmation and chat bubble display
       toast.loading("Confirming transaction...", { id: 'swap' });
@@ -394,7 +533,7 @@ export default function ChatInput({ roomId }: Props) {
             tradeType: settings.mode as 'buy' | 'sell',
             tradeAmount: actualSolAmount, // always SOL basis
             content: memoText || '', // save only user-entered memo text
-            txHash: txId, // include transaction hash
+            txHash: auxiliaryTxId || txId, // include transaction hash
           };
           
           await addMessage(roomId, messageData);
@@ -436,7 +575,7 @@ export default function ChatInput({ roomId }: Props) {
             tradeType: settings.mode as 'buy' | 'sell',
             tradeAmount: actualSolAmount, // always SOL basis
             content: memoText || '', // save only user-entered memo text
-            txHash: txId, // include transaction hash
+            txHash: auxiliaryTxId || txId, // include transaction hash
           };
           
           addMessage(roomId, messageData);
@@ -460,7 +599,7 @@ export default function ChatInput({ roomId }: Props) {
       clearError();
       
     } catch (err: unknown) {
-      
+      console.error('Swap execution error:', err);
       // Specific message based on error type
       let errorMessage = 'An error occurred during swap execution';
       
