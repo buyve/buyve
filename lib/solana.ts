@@ -7,6 +7,7 @@ export type SolanaNetwork = 'mainnet' | 'devnet' | 'testnet';
 const getMainnetRpcEndpoints = () => {
   const customRpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
   const baseEndpoints = [
+    'https://mainnet.helius-rpc.com/?api-key=***REMOVED_HELIUS_KEY***', // Helius dedicated RPC
     'https://solana-mainnet.g.alchemy.com/v2/***REMOVED_ALCHEMY_KEY***', // Alchemy RPC (우선)
     'https://rpc.ankr.com/solana', // Ankr
     'https://mainnet.rpcpool.com', // RPC Pool
