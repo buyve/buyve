@@ -7,7 +7,6 @@ import {
   TransactionInstruction,
   PublicKey,
   Connection,
-  SystemProgram,
 } from '@solana/web3.js';
 // SPL Token 관련 기능은 별도 구현
 import { getStableConnection } from '@/lib/solana';
@@ -19,6 +18,8 @@ import { confirmTransactionHybrid, createAlchemyConnection, getConfirmationStats
 
 // 🎯 수수료 설정 (Jupiter API에서 자동 처리)
 const FEE_RECIPIENT_ADDRESS = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
+const FEE_RATE = 0.0069;
+const PLATFORM_FEE_BPS = Math.round(FEE_RATE * 10000);
 
 const MEMO_BYTE_LIMIT = 120;
 
@@ -59,31 +60,6 @@ function createMemoInstruction(memo: string, signer: PublicKey): TransactionInst
     data: Buffer.from(truncatedMemo, 'utf8'),
   });
 }
-
-// 💰 간단한 SOL 수수료 전송 함수
-async function addFeeInstruction(
-  transaction: Transaction,
-  fromPubkey: PublicKey,
-  feeAmount: number
-): Promise<void> {
-  try {
-    const feeRecipient = new PublicKey(FEE_RECIPIENT_ADDRESS);
-    
-    // 올바른 SystemProgram.transfer() 사용
-    const feeInstruction = SystemProgram.transfer({
-      fromPubkey: fromPubkey,
-      toPubkey: feeRecipient,
-      lamports: feeAmount,
-    });
-    
-    // 트랜잭션 맨 앞에 수수료 인스트럭션 추가
-    transaction.instructions.unshift(feeInstruction);
-  } catch (error) {
-    throw error;
-  }
-}
-
-// 💰 수수료는 Jupiter API에서 자동 처리됩니다
 
 // 🔄 스왑 상태 타입
 export interface SwapState {
@@ -154,6 +130,7 @@ export function useSwap() {
         outputMint: toTokenInfo.address,
         amount: rawAmount,
         userPublicKey: userPublicKeyString,
+        platformFeeBps: PLATFORM_FEE_BPS,
       });
 
       updateState({ quote, loading: false });
@@ -194,12 +171,7 @@ export function useSwap() {
 
     try {
 
-      // 🎯 새로운 Jupiter 수수료 포함 API 사용
-      const inputToken = getTokenByAddress(quote.inputMint);
-      const outputToken = getTokenByAddress(quote.outputMint);
-      
-
-      // 기본 스왑 트랜잭션 생성 (수수료 없이)
+      // 수수료를 Jupiter 플랫폼 기능으로 처리하도록 요청
       const swapResponse = await jupiterService.getSwapTransaction(quote, {
         inputMint: quote.inputMint,
         outputMint: quote.outputMint,
@@ -208,33 +180,14 @@ export function useSwap() {
         wrapAndUnwrapSol: true,
         dynamicComputeUnitLimit: true,
         dynamicSlippage: true,
+        feeAccount: FEE_RECIPIENT_ADDRESS,
+        platformFeeBps: PLATFORM_FEE_BPS,
       });
 
 
       // 받은 swapTransaction 디코딩 (Transaction)
       const swapTxBuf = Buffer.from(swapResponse.swapTransaction, 'base64');
       const transaction = Transaction.from(swapTxBuf);
-
-      // 🎯 수수료 계산 및 추가
-      const swapInputToken = getTokenByAddress(quote.inputMint);
-      
-      // SOL 또는 WSOL인지 확인 (Jupiter는 SOL을 WSOL로 처리함)
-      const SOL_MINT = 'So11111111111111111111111111111111111111112';
-      const isSOLInput = swapInputToken?.symbol === 'SOL' || 
-                        quote.inputMint === SOL_MINT ||
-                        quote.inputMint.toLowerCase() === SOL_MINT.toLowerCase();
-      
-      
-      // 🚨 테스트: 무조건 수수료 추가 (SOL 체크 우회)
-      if (true) { // 원래: if (isSOLInput) {
-        // Buy 모드: SOL을 다른 토큰으로 스왑
-        const solAmount = parseFloat(quote.inAmount) / 1e9; // lamports to SOL
-        const feeAmount = Math.floor(solAmount * 0.0069 * 1e9); // 0.69% 수수료
-        
-        await addFeeInstruction(transaction, publicKey, feeAmount);
-      } else {
-        // No fee for non-SOL input tokens
-      }
 
       // 연결 설정
       const connection = await getStableConnection();
