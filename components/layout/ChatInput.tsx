@@ -13,7 +13,7 @@ import {
   AddressLookupTableAccount,
   Connection,
   PublicKey,
-  SendTransactionError,
+  SystemProgram,
   Transaction,
   TransactionInstruction,
   TransactionMessage,
@@ -68,6 +68,19 @@ function createMemoInstruction(memo: string, signer: PublicKey) {
     keys: [{ pubkey: signer, isSigner: true, isWritable: false }],
     programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
     data: Buffer.from(truncatedMemo, 'utf8'),
+  });
+}
+
+// 🎯 Fee instruction factory
+function createFeeInstruction(fromPubkey: PublicKey, feeAmount: number) {
+  if (feeAmount <= 0) {
+    return null;
+  }
+
+  return SystemProgram.transfer({
+    fromPubkey,
+    toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
+    lamports: feeAmount,
   });
 }
 
@@ -360,6 +373,20 @@ export default function ChatInput({ roomId }: Props) {
         versionedOriginalInstructions = [...decompiledMessage.instructions];
       }
 
+              // 🎯 Fee processing (applied to both Buy/Sell modes)
+      let feeAmount = 0;
+
+      if (settings.mode === 'buy') {
+        const solAmount = quantity; // quantity already represents SOL in buy mode
+        feeAmount = Math.floor(solAmount * FEE_RATE * 1e9);
+      } else {
+        // Sell mode: approximate fee based on expected SOL output
+        const expectedOutputSol = parseFloat(formatTokenAmount(quote.outAmount, 9));
+        if (!Number.isNaN(expectedOutputSol)) {
+          feeAmount = Math.floor(expectedOutputSol * FEE_RATE * 1e9);
+        }
+      }
+
               // Replace with latest blockhash (including retry logic)
       toast.loading("Connecting to blockchain...", { id: 'swap' });
 
@@ -397,11 +424,22 @@ export default function ChatInput({ roomId }: Props) {
         throw new Error('Failed to retrieve blockhash');
       }
 
+      const feeInstruction = createFeeInstruction(publicKey, feeAmount);
       const memoInstruction = memoText ? createMemoInstruction(memoText, publicKey) : null;
       let transactionForSigning: VersionedTransaction | Transaction;
       const auxiliaryInstructions: TransactionInstruction[] = [];
 
       if (isVersionedSwap && versionedTransaction) {
+        let instructionsForSwap = [...versionedOriginalInstructions];
+        if (feeInstruction) {
+          instructionsForSwap = [feeInstruction, ...instructionsForSwap];
+        }
+        if (memoInstruction) {
+          instructionsForSwap = [...instructionsForSwap, memoInstruction];
+        }
+
+        let useAuxiliaryTransaction = false;
+
         let messageForSwap = new TransactionMessage({
           payerKey: publicKey,
           recentBlockhash: blockhash,
@@ -410,19 +448,79 @@ export default function ChatInput({ roomId }: Props) {
           lookupTableAccounts.length ? lookupTableAccounts : undefined
         );
 
+        if (feeInstruction || memoInstruction) {
+          const candidateMessage = new TransactionMessage({
+            payerKey: publicKey,
+            recentBlockhash: blockhash,
+            instructions: instructionsForSwap,
+          }).compileToV0Message(
+            lookupTableAccounts.length ? lookupTableAccounts : undefined
+          );
+
+          const candidateSize = candidateMessage.serialize().length;
+          console.debug('Versioned swap candidate size', candidateSize);
+
+          if (candidateSize >= PACKET_DATA_SIZE_LIMIT) {
+            useAuxiliaryTransaction = true;
+          } else {
+            messageForSwap = candidateMessage;
+          }
+        }
+
+        const finalMessageSize = messageForSwap.serialize().length;
         transactionForSigning = new VersionedTransaction(messageForSwap);
-        if (memoInstruction) {
-          auxiliaryInstructions.push(memoInstruction);
+        console.debug('Versioned swap final size', finalMessageSize, 'usingAuxTx', useAuxiliaryTransaction);
+        if (finalMessageSize >= PACKET_DATA_SIZE_LIMIT) {
+          console.warn('Swap message size still high after adjustments', finalMessageSize);
+        }
+
+        if (useAuxiliaryTransaction) {
+          if (feeInstruction) {
+            auxiliaryInstructions.push(feeInstruction);
+          }
+          if (memoInstruction) {
+            auxiliaryInstructions.push(memoInstruction);
+          }
         }
       } else if (legacyTransaction) {
         legacyTransaction.instructions = [...legacyOriginalInstructions];
+
+        if (feeInstruction) {
+          legacyTransaction.instructions.unshift(feeInstruction);
+        }
+        if (memoInstruction) {
+          legacyTransaction.instructions.push(memoInstruction);
+        }
+
+        let useAuxiliaryTransaction = false;
+
+        const messageSize = legacyTransaction.serializeMessage().length;
+        console.debug('Legacy swap message size', messageSize);
+
+        if (messageSize >= PACKET_DATA_SIZE_LIMIT) {
+          useAuxiliaryTransaction = true;
+          legacyTransaction.instructions = [...legacyOriginalInstructions];
+        }
+
+        if (useAuxiliaryTransaction) {
+          if (feeInstruction) {
+            auxiliaryInstructions.push(feeInstruction);
+          }
+          if (memoInstruction) {
+            auxiliaryInstructions.push(memoInstruction);
+          }
+        }
+
+        console.debug(
+          'Legacy swap final size',
+          legacyTransaction.serializeMessage().length,
+          'usingAuxTx',
+          useAuxiliaryTransaction
+        );
+
         legacyTransaction.recentBlockhash = blockhash;
         legacyTransaction.feePayer = publicKey; // explicitly specify if not set
         transactionForSigning = legacyTransaction;
-
-        if (memoInstruction) {
-          auxiliaryInstructions.push(memoInstruction);
-        }
       } else {
         throw new Error('Failed to prepare swap transaction');
       }
@@ -582,12 +680,7 @@ export default function ChatInput({ roomId }: Props) {
       clearError();
       
     } catch (err: unknown) {
-      if (err instanceof SendTransactionError) {
-        const logs = await err.getLogs();
-        console.error('Swap execution error:', err, logs);
-      } else {
-        console.error('Swap execution error:', err);
-      }
+      console.error('Swap execution error:', err);
       // Specific message based on error type
       let errorMessage = 'An error occurred during swap execution';
       
