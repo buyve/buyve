@@ -34,12 +34,12 @@ const failureBlacklist = new Map<string, {
 
 // 실패 유형별 블랙리스트 지속시간
 const FAILURE_COOLDOWNS = {
-  'rate_limit': 5 * 60 * 1000,    // 5분 (Rate limit)
-  'forbidden': 10 * 60 * 1000,    // 10분 (403 Forbidden)
-  'dns_error': 30 * 60 * 1000,    // 30분 (DNS/ENOTFOUND)
-  'cert_error': 60 * 60 * 1000,   // 60분 (Certificate error)
-  'timeout': 2 * 60 * 1000,       // 2분 (Timeout)
-  'generic': 5 * 60 * 1000,       // 5분 (기타 오류)
+  'rate_limit': 60 * 1000,        // 1분 (Rate limit)
+  'forbidden': 5 * 60 * 1000,     // 5분 (403 Forbidden)
+  'dns_error': 10 * 60 * 1000,    // 10분 (DNS/ENOTFOUND)
+  'cert_error': 30 * 60 * 1000,   // 30분 (Certificate error)
+  'timeout': 30 * 1000,           // 30초 (Timeout)
+  'generic': 30 * 1000,           // 30초 (기타 오류)
 };
 
 // 🚀 성공한 엔드포인트 재사용 로직
@@ -228,6 +228,7 @@ async function makeRpcRequest(body: unknown, retryCount = 0): Promise<unknown> {
   
   try {
     requestCount++;
+    let alreadyBlacklisted = false;
     
     // 타임아웃 10초로 단축 (빠른 실패)
     const controller = new AbortController();
@@ -249,15 +250,30 @@ async function makeRpcRequest(body: unknown, retryCount = 0): Promise<unknown> {
     if (!response.ok) {
       const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
       addToBlacklist(endpoint, error as ErrorWithDetails);
+      alreadyBlacklisted = true;
       throw error;
     }
 
     const data = await response.json();
     
     if (data.error) {
-      const rpcError = new Error(`RPC Error: ${JSON.stringify(data.error)}`);
-      addToBlacklist(endpoint, rpcError as ErrorWithDetails);
-      throw rpcError;
+      const rpcError = data.error;
+      const errorMessage = (rpcError?.message || '').toString();
+      const normalized = errorMessage.toLowerCase();
+
+      const isRateLimit = normalized.includes('rate limit') || normalized.includes('429');
+      const isForbidden = normalized.includes('forbidden') || normalized.includes('403');
+      const shouldBlacklist = isRateLimit || isForbidden;
+
+      if (shouldBlacklist) {
+        const blacklistError = new Error(errorMessage || 'RPC provider limited the request');
+        addToBlacklist(endpoint, blacklistError as ErrorWithDetails);
+        alreadyBlacklisted = true;
+        throw blacklistError;
+      }
+
+      // 정상적인 RPC 에러는 그대로 반환 (엔드포인트는 건강함)
+      return data;
     }
 
     
@@ -279,8 +295,10 @@ async function makeRpcRequest(body: unknown, retryCount = 0): Promise<unknown> {
     
   } catch (error) {
     
-    // 모든 실패를 블랙리스트에 추가
-    addToBlacklist(endpoint, error as ErrorWithDetails);
+    // 모든 실패를 블랙리스트에 추가 (이미 처리한 경우 제외)
+    if (!alreadyBlacklisted && endpoint) {
+      addToBlacklist(endpoint, error as ErrorWithDetails);
+    }
     
     // 다음 엔드포인트로 전환
     currentEndpointIndex = (currentEndpointIndex + 1) % RPC_ENDPOINTS.length;
