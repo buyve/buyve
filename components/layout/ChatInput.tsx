@@ -9,10 +9,12 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { TOKENS, formatTokenAmount } from '@/lib/tokens';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import {
   AddressLookupTableAccount,
   Connection,
   PublicKey,
+  SendTransactionError,
   SystemProgram,
   Transaction,
   TransactionInstruction,
@@ -24,6 +26,9 @@ import {
 const FEE_RECIPIENT_ADDRESS = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
 const FEE_RATE = 0.0069; // 0.69%
 const PLATFORM_FEE_BPS = Math.round(FEE_RATE * 10000); // 69 bps
+
+const FEE_RECIPIENT_PUBKEY = new PublicKey(FEE_RECIPIENT_ADDRESS);
+const PLATFORM_FEE_ACCOUNT_CACHE = new Map<string, string | null>();
 
 type Props = {
   roomId: string;
@@ -82,6 +87,41 @@ function createFeeInstruction(fromPubkey: PublicKey, feeAmount: number) {
     toPubkey: new PublicKey(FEE_RECIPIENT_ADDRESS),
     lamports: feeAmount,
   });
+}
+
+async function resolvePlatformFeeAccount(
+  connection: Connection,
+  mintAddress: string
+): Promise<string | null> {
+  const cached = PLATFORM_FEE_ACCOUNT_CACHE.get(mintAddress);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  try {
+    const mintKey = new PublicKey(mintAddress);
+    const ata = getAssociatedTokenAddressSync(mintKey, FEE_RECIPIENT_PUBKEY);
+    const accountInfo = await connection.getParsedAccountInfo(ata);
+    const data = accountInfo.value?.data as
+      | { program: string; parsed?: { info?: { mint?: string; owner?: string } } }
+      | undefined;
+
+    if (
+      accountInfo.value &&
+      data?.program === 'spl-token' &&
+      data.parsed?.info?.mint === mintAddress &&
+      data.parsed?.info?.owner === FEE_RECIPIENT_ADDRESS
+    ) {
+      const ataAddress = ata.toBase58();
+      PLATFORM_FEE_ACCOUNT_CACHE.set(mintAddress, ataAddress);
+      return ataAddress;
+    }
+  } catch (resolveError) {
+    console.warn('Platform fee account resolution failed', resolveError);
+  }
+
+  PLATFORM_FEE_ACCOUNT_CACHE.set(mintAddress, null);
+  return null;
 }
 
 export default function ChatInput({ roomId }: Props) {
@@ -269,12 +309,31 @@ export default function ChatInput({ roomId }: Props) {
       const slippageBps = Math.floor(parseFloat(settings.slippage) * 100); // % to bps conversion
       const priorityFeeLamports = Math.floor(parseFloat(settings.priorityFee) * 1e9); // SOL to lamports conversion
 
+      let platformFeeAccount: string | null = null;
+      if (PLATFORM_FEE_BPS > 0) {
+        platformFeeAccount = await resolvePlatformFeeAccount(connection, tokenPairInfo.outputMint);
+        if (!platformFeeAccount) {
+          console.warn(
+            `Platform fee account unavailable for mint ${tokenPairInfo.outputMint}. Jupiter platform fee disabled.`
+          );
+        }
+      }
+
               // 1) Request Quote from Jupiter API (applying Presets slippage)
       toast.loading("Getting quote...", { id: 'swap' });
       
-      const quoteRes = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=${tokenPairInfo.inputMint}&outputMint=${tokenPairInfo.outputMint}&amount=${amount}&slippageBps=${slippageBps}&platformFeeBps=${PLATFORM_FEE_BPS}`
-      );
+      const quoteParams = new URLSearchParams({
+        inputMint: tokenPairInfo.inputMint,
+        outputMint: tokenPairInfo.outputMint,
+        amount: amount.toString(),
+        slippageBps: slippageBps.toString(),
+      });
+
+      if (platformFeeAccount) {
+        quoteParams.set('platformFeeBps', PLATFORM_FEE_BPS.toString());
+      }
+
+      const quoteRes = await fetch(`https://quote-api.jup.ag/v6/quote?${quoteParams.toString()}`);
       const quote = await quoteRes.json();
       
               // Check if Quote has errors
@@ -284,15 +343,20 @@ export default function ChatInput({ roomId }: Props) {
       }
       toast.loading("Preparing swap transaction...", { id: 'swap' });
       
+      const swapPayload: Record<string, unknown> = {
+        quoteResponse: quote,
+        userPublicKey: publicKey.toBase58(),
+        prioritizationFeeLamports: priorityFeeLamports, // Presets priority fee applied
+      };
+
+      if (platformFeeAccount) {
+        swapPayload.feeAccount = platformFeeAccount;
+      }
+
       const swapRes = await fetch('https://quote-api.jup.ag/v6/swap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          quoteResponse: quote,
-          userPublicKey: publicKey.toBase58(),
-          prioritizationFeeLamports: priorityFeeLamports, // Presets priority fee applied
-          feeAccount: FEE_RECIPIENT_ADDRESS,
-        }),
+        body: JSON.stringify(swapPayload),
       });
       const swapData = await swapRes.json();
       
@@ -681,19 +745,41 @@ export default function ChatInput({ roomId }: Props) {
       
     } catch (err: unknown) {
       console.error('Swap execution error:', err);
-      // Specific message based on error type
+
       let errorMessage = 'An error occurred during swap execution';
-      
       const errorString = err instanceof Error ? err.message : String(err);
-      
-      if (errorString.includes('403') || errorString.includes('Forbidden')) {
-        errorMessage = 'RPC server access is restricted. Please try again later.';
-      } else if (errorString.includes('blockhash')) {
-        errorMessage = 'Blockchain connection failed. Please check your network.';
-      } else if (errorString.includes('insufficient')) {
-        errorMessage = 'Insufficient balance.';
+
+      if (err instanceof SendTransactionError) {
+        try {
+          // Retrieve detailed logs from the failed transaction for easier debugging
+          const logs = await err.getLogs(connection);
+          console.error('Swap transaction logs:', logs);
+          const lastLog = [...logs].reverse().find((log) => log.trim().length > 0);
+          if (lastLog) {
+            errorMessage = lastLog;
+          } else {
+            const transactionError = err.transactionError;
+            if (transactionError?.message) {
+              errorMessage = transactionError.message;
+            }
+          }
+        } catch (logError) {
+          console.error('Failed to retrieve swap logs', logError);
+        }
       }
-      
+
+      if (errorMessage === 'An error occurred during swap execution') {
+        if (errorString.includes('403') || errorString.includes('Forbidden')) {
+          errorMessage = 'RPC server access is restricted. Please try again later.';
+        } else if (errorString.includes('blockhash')) {
+          errorMessage = 'Blockchain connection failed. Please check your network.';
+        } else if (errorString.includes('insufficient')) {
+          errorMessage = 'Insufficient balance.';
+        } else if (errorString) {
+          errorMessage = errorString;
+        }
+      }
+
       toast.error(errorMessage, { id: 'swap' });
     } finally {
       setIsLoading(false);
