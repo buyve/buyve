@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, useMemo } from 'react';
+import React, { ReactNode, useMemo, useState, useEffect } from 'react';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
@@ -16,6 +16,33 @@ interface WalletProviderWrapperProps {
 }
 
 export default function WalletProviderWrapper({ children }: WalletProviderWrapperProps) {
+    const [isPopupMode, setIsPopupMode] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        const params = new URLSearchParams(window.location.search);
+        return params.get('popup') === 'true';
+    });
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const updatePopupState = () => {
+            const params = new URLSearchParams(window.location.search);
+            setIsPopupMode(params.get('popup') === 'true');
+        };
+
+        updatePopupState();
+
+        window.addEventListener('popstate', updatePopupState);
+        window.addEventListener('pushstate', updatePopupState as EventListener);
+        window.addEventListener('replacestate', updatePopupState as EventListener);
+
+        return () => {
+            window.removeEventListener('popstate', updatePopupState);
+            window.removeEventListener('pushstate', updatePopupState as EventListener);
+            window.removeEventListener('replacestate', updatePopupState as EventListener);
+        };
+    }, []);
+
     // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'.
     const network = WalletAdapterNetwork.Mainnet;
 
@@ -53,7 +80,7 @@ export default function WalletProviderWrapper({ children }: WalletProviderWrappe
                 }
             }}
         >
-            <WalletProvider wallets={wallets} autoConnect>
+            <WalletProvider wallets={wallets} autoConnect={!isPopupMode}>
                 <WalletModalProvider>
                     <CustomWalletProvider>
                         {children}

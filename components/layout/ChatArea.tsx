@@ -230,35 +230,9 @@ export default function ChatArea() {
     
     if (!currentRoom) return null;
 
-    // Simplified header for popup mode
+    // 팝업 모드에서는 헤더를 숨겨 말풍선만 노출
     if (isPopupMode) {
-      return (
-        <div className="flex items-center justify-between p-2 bg-[oklch(25%_0_0)] border-b border-[oklch(0%_0_0)] shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] relative z-10">
-          <div className="flex items-center space-x-2">
-            <TokenAvatar 
-              tokenAddress={currentRoom.contractAddress}
-              tokenName={currentRoom.name}
-              size="sm"
-              imageUrl={currentRoom.image}
-            />
-            <div className="flex flex-col">
-              <h3 className="font-semibold text-sm text-[oklch(0.9249_0_0)]">{currentRoom.name}</h3>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-[oklch(0.9249_0_0)]">
-                  ({currentRoom.contractAddress.slice(0, 4)}...{currentRoom.contractAddress.slice(-4)})
-                </span>
-                <button 
-                  onClick={() => copyToClipboard(currentRoom.contractAddress)}
-                  className="p-1 hover:bg-[oklch(0.2393_0_0)] rounded-none transition-all bg-[oklch(0.2393_0_0)] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
-                  title="Copy CA address"
-                >
-                  <Copy size={10} className="text-white" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+      return null;
     }
 
     return (
@@ -306,7 +280,7 @@ export default function ChatArea() {
                       <button 
               onClick={() => {
                 const baseUrl = window.location.origin;
-                const popupUrl = `${baseUrl}/?popup=true&room=${currentRoom.contractAddress}`;
+                const popupUrl = `${baseUrl}/trade?popup=true&room=${currentRoom.contractAddress}`;
                 const width = 400;
                 const height = 600;
                 const left = window.screen.width - width - 50;
