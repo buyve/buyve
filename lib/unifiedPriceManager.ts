@@ -41,15 +41,15 @@ class UnifiedPriceManager {
   private chartCache: Map<string, UnifiedChartPoint[]> = new Map();
   private updateIntervals: Map<string, NodeJS.Timeout> = new Map();
 
-  // 🎯 Jupiter v6 API를 사용한 통일된 가격 조회
-  // Jupiter v6 엔드포인트(https://price.jup.ag/v6/price)에서 실시간 시세를 받아오고,
+  // 🎯 Jupiter API를 사용한 통일된 가격 조회
+  // Jupiter Lite API v3 엔드포인트에서 실시간 시세를 받아오고,
   // 24시간 전 히스토리를 Supabase에서 끌어와 상승·하락률을 계산한 뒤
   // 실패 시 DB 데이터로 폴백합니다.
   private async fetchUnifiedPrice(tokenAddress: string): Promise<UnifiedPriceData | null> {
     try {
-      // 1. Jupiter v6 엔드포인트에서 실시간 시세 조회
+      // 1. Jupiter Lite API v3에서 실시간 시세 조회
       const response = await fetch(
-        `https://price.jup.ag/v6/price?ids=${tokenAddress}&showExtraInfo=true`
+        `https://lite-api.jup.ag/price/v3?ids=${tokenAddress}`
       );
 
       if (!response.ok) {
@@ -57,9 +57,9 @@ class UnifiedPriceManager {
       }
 
       const data = await response.json();
-      const priceInfo = data.data[tokenAddress];
+      const priceInfo = data[tokenAddress];
 
-      if (!priceInfo) {
+      if (!priceInfo || !priceInfo.usdPrice) {
         throw new Error('Token not found in Jupiter API');
       }
 
@@ -76,10 +76,12 @@ class UnifiedPriceManager {
       let priceChangePercent = 0;
       let hasHistory = false;
 
+      const currentPrice = parseFloat(priceInfo.usdPrice);
+
       if (history && history.length > 0) {
         hasHistory = true;
         const price24hAgo = history[0].open_price;
-        priceChange24h = priceInfo.price - price24hAgo;
+        priceChange24h = currentPrice - price24hAgo;
         priceChangePercent = (priceChange24h / price24hAgo) * 100;
       }
 
@@ -89,7 +91,7 @@ class UnifiedPriceManager {
       const unifiedData: UnifiedPriceData = {
         tokenAddress,
         symbol,
-        price: priceInfo.price,
+        price: currentPrice,
         priceChange24h,
         priceChangePercent,
         timestamp: new Date().toISOString(),
@@ -228,18 +230,21 @@ class UnifiedPriceManager {
   // Supabase Realtime 채널을 구독하면서 1분 주기로 fetchUnifiedPrice를 재호출하여
   // 캐시를 갱신하고, 프런트 구독자에게 브로드캐스트합니다.
   private async setupPriceChannel(tokenAddress: string) {
+    console.log(`🔔 Setting up Realtime channel for ${tokenAddress}`);
+
     const channel = supabase
       .channel(`unified_price:${tokenAddress}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // INSERT와 UPDATE 모두 감지
           schema: 'public',
           table: 'token_price_history',
           filter: `token_address=eq.${tokenAddress}`
         },
         (payload: any) => {
-          // Supabase INSERT 이벤트가 발생하면 다시 Jupiter 쿼리로 값을 확정한 뒤 모든 구독자에게 재전파
+          console.log(`🔥 DB Update detected for ${tokenAddress}:`, payload.eventType);
+          // Supabase INSERT/UPDATE 이벤트가 발생하면 차트와 가격 업데이트
           this.handleDatabaseUpdate(tokenAddress, payload.new);
         }
       )
@@ -247,15 +252,19 @@ class UnifiedPriceManager {
         'broadcast',
         { event: 'price_update' },
         (payload: any) => {
+          console.log(`📡 Broadcast received for ${tokenAddress}`);
           this.handleRealtimeUpdate(tokenAddress, payload.payload);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`✅ Channel subscription status for ${tokenAddress}:`, status);
+      });
 
     this.channels.set(tokenAddress, channel);
 
     // 1분 주기로 fetchUnifiedPrice를 재호출하여 캐시를 갱신하고, 프런트 구독자에게 브로드캐스트
     const interval = setInterval(async () => {
+      console.log(`⏰ 1-minute interval update for ${tokenAddress}`);
       const priceData = await this.fetchUnifiedPrice(tokenAddress);
       if (priceData) {
         this.priceCache.set(tokenAddress, priceData);
@@ -276,12 +285,15 @@ class UnifiedPriceManager {
   // 데이터베이스 업데이트 처리
   // Supabase INSERT 이벤트가 발생하면 다시 Jupiter 쿼리로 값을 확정한 뒤 모든 구독자에게 재전파
   private handleDatabaseUpdate(tokenAddress: string, data: Record<string, unknown>) {
+    console.log(`💾 handleDatabaseUpdate called for ${tokenAddress}:`, data);
+
     // 새로운 OHLCV 데이터가 추가되면 차트 업데이트
     this.appendToChart(tokenAddress, data);
 
     // 가격 데이터도 Jupiter 쿼리로 재확정하여 업데이트
     this.fetchUnifiedPrice(tokenAddress).then(priceData => {
       if (priceData) {
+        console.log(`✅ Price updated for ${tokenAddress}:`, priceData.price);
         this.priceCache.set(tokenAddress, priceData);
         this.notifyPriceSubscribers(tokenAddress, priceData);
       }
@@ -380,6 +392,7 @@ class UnifiedPriceManager {
   // 차트에 새 데이터 추가
   // 새 레코드가 들어오면 appendToChart로 최신 봉만 유지합니다.
   private appendToChart(tokenAddress: string, newData: Record<string, unknown>) {
+    console.log(`📊 appendToChart called for ${tokenAddress}`);
     const existing = this.chartCache.get(tokenAddress) || [];
     const newPoint = this.convertDatabaseToChart([newData])[0];
 
@@ -390,6 +403,7 @@ class UnifiedPriceManager {
       )
       .slice(-60);
 
+    console.log(`📈 Chart updated: ${existing.length} -> ${updated.length} points`);
     this.chartCache.set(tokenAddress, updated);
     this.notifyChartSubscribers(tokenAddress, updated);
   }
