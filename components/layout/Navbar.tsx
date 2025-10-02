@@ -154,7 +154,7 @@ function ChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
-          placeholder="Search and select chatroom..."
+          placeholder="Search and select Buyve room..."
           className="neobrutalism-input pl-10"
           value={searchQuery}
           onChange={handleSearchChange}
@@ -170,7 +170,7 @@ function ChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
             style={{ backgroundColor: 'oklch(72.27% 0.1894 50.19)' }}
           >
             {/* Header */}
-                          <div className="px-2 py-1.5 text-sm font-semibold">Chatroom List</div>
+                          <div className="px-2 py-1.5 text-sm font-semibold">Buyve Room List</div>
             <div className="h-px bg-border mx-1"></div>
             
                           {/* Chatroom list area (up to 5, scrollable) */}
@@ -178,7 +178,7 @@ function ChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
               {isLoading ? (
                 <div className="relative flex select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none">
                   <span className="text-sm text-muted-foreground">
-                    Loading chatrooms...
+                    Loading Buyve rooms...
                   </span>
                 </div>
               ) : filteredRooms.length > 0 ? (
@@ -203,7 +203,7 @@ function ChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
               ) : (
                 <div className="relative flex select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
                   <span className="text-sm text-muted-foreground">
-                    No chatrooms match &apos;{searchQuery}&apos;.
+                    No Buyve rooms match &apos;{searchQuery}&apos;.
                   </span>
                 </div>
               )}
@@ -212,14 +212,14 @@ function ChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
             {/* Separator */}
             <div className="h-px bg-border mx-1"></div>
             
-                          {/* Create chat room option (always fixed) */}
+                          {/* Create Buyve room option (always fixed) */}
             <div
               onClick={handleCreateRoom}
               className="relative flex cursor-pointer select-none items-center rounded-[5px] px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground hover:border-2 hover:border-black data-[disabled]:pointer-events-none data-[disabled]:opacity-50 gap-3 border-2 border-transparent text-blue-600 font-medium"
             >
               <span className="text-lg">➕</span>
               <div className="flex-1">
-                <div className="font-semibold">Add achat room</div>
+                <div className="font-semibold">Add Buyve room</div>
               </div>
             </div>
           </div>

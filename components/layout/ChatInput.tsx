@@ -333,7 +333,7 @@ export default function ChatInput({ roomId }: Props) {
         quoteParams.set('platformFeeBps', PLATFORM_FEE_BPS.toString());
       }
 
-      const quoteRes = await fetch(`https://quote-api.jup.ag/v6/quote?${quoteParams.toString()}`);
+      const quoteRes = await fetch(`https://lite-api.jup.ag/swap/v1/quote?${quoteParams.toString()}`);
       const quote = await quoteRes.json();
       
               // Check if Quote has errors
@@ -353,7 +353,7 @@ export default function ChatInput({ roomId }: Props) {
         swapPayload.feeAccount = platformFeeAccount;
       }
 
-      const swapRes = await fetch('https://quote-api.jup.ag/v6/swap', {
+      const swapRes = await fetch('https://lite-api.jup.ag/swap/v1/swap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(swapPayload),
@@ -594,7 +594,7 @@ export default function ChatInput({ roomId }: Props) {
       const outputAmount = formatTokenAmount(quote.outAmount, tokenPairInfo.outputTokenInfo.decimals);
       
       // Swap execution toast
-      toast.loading(`Executing swap... ${inputAmount} ${tokenPairInfo.inputTokenInfo.symbol} → ${outputAmount} ${tokenPairInfo.outputTokenInfo.symbol}`, { id: 'swap' });
+      toast.loading(`swap ${inputAmount} ${tokenPairInfo.inputTokenInfo.symbol} → ${outputAmount} ${tokenPairInfo.outputTokenInfo.symbol}`, { id: 'swap' });
 
       // 4) Sign and send transaction (using same connection)
       const signedTransaction = await signTransaction(

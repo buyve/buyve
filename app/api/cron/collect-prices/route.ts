@@ -3,12 +3,14 @@ import { tokenPriceService, DEFAULT_TOKENS } from '@/lib/tokenPriceService';
 import { headers } from 'next/headers';
 
 // 🔄 Vercel Cron Job을 위한 가격 수집 API
+// 주기적 크론이 tokenPriceService.updateTokenPrice를 호출해 DB를 채우는 구조로,
+// 기본 토큰에 대해 가격 업데이트를 수행합니다.
 export async function GET(request: NextRequest) {
   try {
     // Vercel Cron Job 인증 확인
     const authHeader = headers().get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    
+
     // 프로덕션에서는 보안 체크
     if (process.env.NODE_ENV === 'production') {
       if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
@@ -16,7 +18,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 가격 업데이트 실행
+    // 주기적 크론이 tokenPriceService.updateTokenPrice를 호출해 DB를 채움 (기본 토큰)
     const startTime = Date.now();
     const results = await Promise.allSettled(
       DEFAULT_TOKENS.map(token => tokenPriceService.updateTokenPrice(token))

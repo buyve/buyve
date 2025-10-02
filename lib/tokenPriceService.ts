@@ -22,20 +22,20 @@ export class TokenPriceService {
   private async fetchJupiterPrice(tokenAddress: string): Promise<number | null> {
     try {
       const response = await fetch(
-        `https://lite-api.jup.ag/price/v2?ids=${tokenAddress}&showExtraInfo=true`
+        `https://lite-api.jup.ag/price/v3?ids=${tokenAddress}`
       );
-      
+
       if (!response.ok) {
         return null;
       }
 
       const data = await response.json();
-      const tokenData = data.data[tokenAddress];
+      const tokenData = data[tokenAddress];
 
-      if (tokenData && tokenData.price) {
-        return parseFloat(tokenData.price);
+      if (tokenData && tokenData.usdPrice) {
+        return parseFloat(tokenData.usdPrice);
       }
-      
+
       return null;
     } catch {
       return null;
@@ -47,7 +47,7 @@ export class TokenPriceService {
    */
   async updateTokenPrice(tokenAddress: string): Promise<boolean> {
     try {
-      
+
       // Jupiter API에서 현재 가격 조회
       const currentPrice = await this.fetchJupiterPrice(tokenAddress);
       if (!currentPrice) {
@@ -164,27 +164,27 @@ export class TokenPriceService {
    */
   private async fetchBatchPrices(tokenAddresses: string[]): Promise<Map<string, number>> {
     const priceMap = new Map<string, number>();
-    
+
     try {
       const response = await fetch(
-        `https://lite-api.jup.ag/price/v2?ids=${tokenAddresses.join(',')}&showExtraInfo=true`
+        `https://lite-api.jup.ag/price/v3?ids=${tokenAddresses.join(',')}`
       );
-      
+
       if (!response.ok) {
         return priceMap;
       }
 
       const data = await response.json();
-      
-      for (const [address, tokenData] of Object.entries(data.data || {})) {
-        if (tokenData && typeof tokenData === 'object' && 'price' in tokenData) {
-          const price = parseFloat(String(tokenData.price));
+
+      for (const [address, tokenData] of Object.entries(data || {})) {
+        if (tokenData && typeof tokenData === 'object' && 'usdPrice' in tokenData) {
+          const price = parseFloat(String(tokenData.usdPrice));
           if (!isNaN(price)) {
             priceMap.set(address, price);
           }
         }
       }
-      
+
       return priceMap;
     } catch {
       return priceMap;
@@ -220,15 +220,15 @@ export class TokenPriceService {
 
       // 4. 배치 UPSERT 데이터 준비
       const upsertData: TokenPriceHistoryInsert[] = [];
-      
+
       for (const [tokenAddress, currentPrice] of priceMap) {
         const existing = existingMap.get(tokenAddress);
-        
+
         if (existing) {
           // 기존 데이터 업데이트용 - OHLC 계산
           const highPrice = Math.max(existing.high_price, currentPrice);
           const lowPrice = Math.min(existing.low_price, currentPrice);
-          
+
           upsertData.push({
             token_address: tokenAddress,
             price: currentPrice,
@@ -263,7 +263,7 @@ export class TokenPriceService {
           onConflict: 'token_address,timestamp_1min',
           ignoreDuplicates: false
         });
-      
+
       if (error) {
         console.error('Batch upsert error:', error);
         return false;

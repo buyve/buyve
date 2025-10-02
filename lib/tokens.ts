@@ -32,8 +32,8 @@ export const TOKENS = {
 
 // 🔄 스왑 관련 상수
 export const SWAP_CONFIG = {
-  // Jupiter Aggregator API
-  JUPITER_API_URL: 'https://quote-api.jup.ag/v6',
+  // Jupiter Aggregator API (2025 엔드포인트 업데이트)
+  JUPITER_API_URL: 'https://lite-api.jup.ag/swap/v1',
   
   // 기본 슬리피지 (0.5%)
   DEFAULT_SLIPPAGE_BPS: 50,
