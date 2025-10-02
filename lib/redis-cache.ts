@@ -23,45 +23,49 @@ class RedisCacheManager {
   private async initializeClient() {
     // Edge Runtime에서는 Redis 비활성화
     if (!isNodeRuntime) {
-      console.warn('Redis not available in Edge Runtime - caching disabled');
+      // Redis 사용 불가 시 조용히 비활성화
       return;
     }
 
     try {
       const REDIS_URL = process.env.REDIS_URL;
       if (!REDIS_URL) {
-        console.warn('REDIS_URL not found - caching disabled');
+        // REDIS_URL 없으면 조용히 비활성화
         return;
       }
 
       this.client = createClient({
         url: REDIS_URL,
         socket: {
-          reconnectStrategy: (retries) => Math.min(retries * 50, 500),
+          reconnectStrategy: (retries) => {
+            // 3회 이상 재시도 실패 시 연결 중단
+            if (retries > 3) {
+              return false as any;
+            }
+            return Math.min(retries * 50, 500);
+          },
           enableReadyCheck: true,
           maxRetriesPerRequest: 3,
           retryDelayOnFailover: 100
         }
       });
 
-      this.client.on('error', (err) => {
-        console.error('Redis Cache Error:', err);
+      this.client.on('error', () => {
+        // Redis 연결 에러 시 조용히 비활성화 (로그 제거)
         this.isConnected = false;
       });
 
       this.client.on('connect', () => {
-        console.log('Redis Cache Connected');
         this.isConnected = true;
       });
 
       this.client.on('disconnect', () => {
-        console.log('Redis Cache Disconnected');
         this.isConnected = false;
       });
 
       await this.client.connect();
     } catch (error) {
-      console.error('Failed to initialize Redis cache:', error);
+      // 초기화 실패 시 조용히 비활성화 (로그 제거)
       this.client = null;
     }
   }
@@ -73,7 +77,7 @@ class RedisCacheManager {
       const value = await this.client.get(key);
       return value ? JSON.parse(value) : null;
     } catch (error) {
-      console.error('Redis get error:', error);
+      // Redis 에러 시 조용히 null 반환
       return null;
     }
   }
@@ -83,16 +87,16 @@ class RedisCacheManager {
 
     try {
       const serialized = JSON.stringify(value);
-      
+
       if (ttlSeconds) {
         await this.client.setEx(key, ttlSeconds, serialized);
       } else {
         await this.client.set(key, serialized);
       }
-      
+
       return true;
     } catch (error) {
-      console.error('Redis set error:', error);
+      // Redis 에러 시 조용히 false 반환
       return false;
     }
   }
@@ -104,7 +108,7 @@ class RedisCacheManager {
       await this.client.del(key);
       return true;
     } catch (error) {
-      console.error('Redis del error:', error);
+      // Redis 에러 시 조용히 false 반환
       return false;
     }
   }
@@ -116,7 +120,7 @@ class RedisCacheManager {
       const result = await this.client.exists(key);
       return result === 1;
     } catch (error) {
-      console.error('Redis exists error:', error);
+      // Redis 에러 시 조용히 false 반환
       return false;
     }
   }
@@ -127,7 +131,7 @@ class RedisCacheManager {
     try {
       return await this.client.ttl(key);
     } catch (error) {
-      console.error('Redis ttl error:', error);
+      // Redis 에러 시 조용히 -1 반환
       return -1;
     }
   }
@@ -139,7 +143,7 @@ class RedisCacheManager {
       await this.client.flushAll();
       return true;
     } catch (error) {
-      console.error('Redis flush error:', error);
+      // Redis 에러 시 조용히 false 반환
       return false;
     }
   }
@@ -153,7 +157,7 @@ class RedisCacheManager {
       try {
         await this.client.quit();
       } catch (error) {
-        console.error('Redis close error:', error);
+        // Redis 종료 에러 시 조용히 무시
       }
     }
   }

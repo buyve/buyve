@@ -49,14 +49,24 @@ class JupiterTokenListCache {
 
   private async fetchTokenList(): Promise<void> {
     try {
-      const response = await fetch('https://token.jup.ag/strict');
-      if (!response.ok) throw new Error('Failed to fetch Jupiter token list');
-      
-      const tokens: JupiterTokenMetadata[] = await response.json();
+      // Jupiter API 엔드포인트 변경: quote-api.jup.ag → lite-api.jup.ag
+      // Solana token registry를 fallback으로 사용
+      const response = await fetch('https://cdn.jsdelivr.net/gh/solana-labs/token-list@main/src/tokens/solana.tokenlist.json');
+      if (!response.ok) throw new Error('Failed to fetch token list');
+
+      const data = await response.json();
+      const tokens: JupiterTokenMetadata[] = data.tokens.map((t: any) => ({
+        address: t.address,
+        name: t.name,
+        symbol: t.symbol,
+        logoURI: t.logoURI,
+      }));
       this.cache = new Map(tokens.map(token => [token.address, token]));
       this.lastFetch = Date.now();
     } catch (error) {
-      console.error('Failed to fetch Jupiter token list:', error);
+      console.error('Failed to fetch token list:', error);
+      // 빈 캐시 설정하여 반복 실패 요청 방지
+      this.cache = new Map();
     }
   }
 }

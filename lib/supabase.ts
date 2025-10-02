@@ -60,7 +60,7 @@ export type Database = {
           high_price: number
           low_price: number
           close_price: number
-          timestamp_15min: string
+          timestamp_1min: string
           volume: number | null
           created_at: string | null
         }
@@ -72,7 +72,7 @@ export type Database = {
           high_price: number
           low_price: number
           close_price: number
-          timestamp_15min: string
+          timestamp_1min: string
           volume?: number | null
           created_at?: string | null
         }
@@ -84,7 +84,7 @@ export type Database = {
           high_price?: number
           low_price?: number
           close_price?: number
-          timestamp_15min?: string
+          timestamp_1min?: string
           volume?: number | null
           created_at?: string | null
         }

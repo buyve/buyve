@@ -62,7 +62,7 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
 
   const handleCreate = async () => {
     if (!roomName.trim() || !contractAddress.trim()) {
-      alert('Please enter both chatroom name and contract address.');
+      alert('Please enter both Buyve room name and contract address.');
       return;
     }
 
@@ -114,10 +114,10 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to create chatroom.');
+        throw new Error(data.error || 'Failed to create Buyve room.');
       }
 
-      alert(`"${roomName}" chatroom created successfully!\nTransaction: ${transactionSignature}`);
+      alert(`"${roomName}" Buyve room created successfully!\nTransaction: ${transactionSignature}`);
       
       // Reset on success
       onOpenChange(false);
@@ -126,12 +126,12 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
       setStep('input');
 
       // Send chatroom list refresh event
-      window.dispatchEvent(new CustomEvent('chatroomCreated', { 
-        detail: { chatroom: data.chatroom } 
+      window.dispatchEvent(new CustomEvent('Buyve roomCreated', { 
+        detail: { Buyveroom: data.chatroom } 
       }));
 
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'An error occurred while creating the chatroom.');
+      alert(error instanceof Error ? error.message : 'An error occurred while creating the Buyve room.');
       setStep('input');
     } finally {
       setIsLoading(false);
@@ -236,9 +236,9 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {step === 'input' && 'Create New Chatroom'}
+            {step === 'input' && 'Create New Buyve room'}
             {step === 'payment' && 'Processing Payment...'}
-            {step === 'creating' && 'Creating Chatroom...'}
+            {step === 'creating' && 'Creating Buyve room...'}
           </DialogTitle>
         </DialogHeader>
         
@@ -249,7 +249,7 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
               {!isConnected && (
                 <div className="p-3 bg-yellow-100 border border-yellow-400 rounded-md">
                   <p className="text-sm text-yellow-700">
-                    ⚠️ Please connect your wallet first to create a chatroom.
+                    ⚠️ Please connect your wallet first to create a Buyve room.
                   </p>
                 </div>
               )}
@@ -257,13 +257,13 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
               {/* Payment information */}
               <div className="p-3 bg-blue-100 border border-blue-400 rounded-md">
                 <p className="text-sm text-blue-700">
-                  💰 Chatroom creation fee: <strong>0.001 SOL</strong>
+                  💰 Buyve room creation fee: <strong>0.001 SOL</strong>
                 </p>
               </div>
 
               {/* Chatroom name */}
               <div className="space-y-2">
-                <Label htmlFor="roomName">Chatroom Name *</Label>
+                <Label htmlFor="roomName">Buyve room Name *</Label>
                 <Input
                   id="roomName"
                   value={roomName}
@@ -324,7 +324,7 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
           {step === 'creating' && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-              <p className="text-lg font-medium">Creating Chatroom</p>
+              <p className="text-lg font-medium">Creating Buyve room</p>
               <p className="text-sm text-muted-foreground">
                 Please wait a moment...
               </p>

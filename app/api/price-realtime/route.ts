@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     
     // Jupiter API에서 현재 가격 가져오기
     const currentPrice = await priceService.getLatestTokenPrice(token);
-    
+
     if (!currentPrice) {
       return NextResponse.json({
         success: false,

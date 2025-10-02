@@ -633,7 +633,7 @@ export default function MobilePutter() {
           <div className="w-80 max-w-[85vw] bg-[oklch(0.2393_0_0)] border-l-2 border-black flex flex-col search-sidebar">
             {/* Sidebar header */}
             <div className="flex items-center justify-between p-4 border-b-2 border-black bg-[oklch(0.2393_0_0)] text-white">
-              <h2 className="text-lg font-bold">Search Chatrooms</h2>
+              <h2 className="text-lg font-bold">Search Buyve rooms</h2>
               <Button 
                 onClick={closeSearchSidebar}
                 size="sm"
@@ -648,7 +648,7 @@ export default function MobilePutter() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-300" />
                 <Input 
-                  placeholder="Search chatroom names..."
+                  placeholder="Search Buyve room names..."
                   className="pl-10 border-2 border-black focus:border-black focus:ring-0 rounded-none bg-[oklch(0.2393_0_0)] text-white placeholder:text-gray-300"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -663,7 +663,7 @@ export default function MobilePutter() {
                 <div className="flex items-center justify-center h-32 text-gray-300">
                   <div className="text-center">
                     <Search className="h-8 w-8 mx-auto mb-2 opacity-50 animate-spin" />
-                    <p className="text-sm">Loading chatrooms...</p>
+                    <p className="text-sm">Loading Buyve rooms...</p>
                   </div>
                 </div>
               ) : filteredRooms.length > 0 ? (
@@ -693,7 +693,7 @@ export default function MobilePutter() {
                     <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">
                       {searchQuery.trim() 
-                        ? `No chatrooms match '${searchQuery}'.`
+                        ? `No Buyve rooms match '${searchQuery}'.`
                         : 'Enter a search term.'
                       }
                     </p>
@@ -710,13 +710,13 @@ export default function MobilePutter() {
               >
                 <span className="text-xl">➕</span>
                                   <div className="flex-1">
-                    <div className="font-semibold">Add chat room</div>
+                    <div className="font-semibold">Add Buyve room</div>
                   </div>
               </button>
               
               {/* Total chatroom count */}
               <p className="text-xs text-gray-300 text-center mt-2">
-                Total {filteredRooms.length} chatrooms
+                Total {filteredRooms.length} Buyve rooms
               </p>
             </div>
           </div>

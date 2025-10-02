@@ -56,13 +56,13 @@ export default function ChatArea() {
     const fetchRealtimePrice = async () => {
       try {
         const response = await fetch(`/api/price-realtime?token=${encodeURIComponent(selectedRoom)}`);
-        
+
         if (!response.ok) {
           return;
         }
 
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           setCurrentPrice(result.data.currentPrice);
           setPriceChange(result.data.priceChange);
@@ -306,7 +306,7 @@ export default function ChatArea() {
     if (!selectedRoom) {
       return (
         <div className="flex-1 flex items-center justify-center text-gray-500">
-          <span>Please select a chatroom</span>
+          <span>Please select a Buyve room</span>
         </div>
       );
     }

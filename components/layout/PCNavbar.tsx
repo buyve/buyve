@@ -137,7 +137,7 @@ function PCChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-300" />
         <Input 
-          placeholder="Search and select chat room..."
+          placeholder="Search and select Buyve room..."
           className="pl-10 border-2 border-black focus:border-black focus:ring-0 rounded-none bg-[oklch(0.2393_0_0)] text-white placeholder:text-gray-300"
           value={searchQuery}
           onChange={handleSearchChange}
@@ -151,14 +151,14 @@ function PCChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
             className="w-full text-white border-2 border-black rounded-none shadow-[var(--shadow)] flex flex-col"
             style={{ backgroundColor: 'oklch(0.2393 0 0)' }}
           >
-            <div className="px-2 py-1.5 text-sm font-semibold">Chat Room List</div>
+            <div className="px-2 py-1.5 text-sm font-semibold">Buyve Room List</div>
             <div className="h-px bg-black mx-1"></div>
             
             <div className="max-h-[240px] overflow-y-auto">
               {isLoading ? (
                 <div className="relative flex select-none items-center rounded-none px-2 py-1.5 text-sm outline-none">
                   <span className="text-sm text-gray-300">
-                    Loading chat rooms...
+                    Loading Buyve rooms...
                   </span>
                 </div>
               ) : filteredRooms.length > 0 ? (
@@ -183,7 +183,7 @@ function PCChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
               ) : (
                 <div className="relative flex select-none items-center rounded-none px-2 py-1.5 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
                   <span className="text-sm text-gray-300">
-                    No chat rooms match &apos;{searchQuery}&apos;.
+                    No Buyve rooms match &apos;{searchQuery}&apos;.
                   </span>
                 </div>
               )}
@@ -197,7 +197,7 @@ function PCChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
             >
               <span className="text-lg">➕</span>
               <div className="flex-1">
-                <div className="font-semibold">Add chat room</div>
+                <div className="font-semibold">Add Buyve room</div>
               </div>
             </div>
           </div>
