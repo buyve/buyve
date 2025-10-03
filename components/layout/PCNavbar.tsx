@@ -168,11 +168,10 @@ function PCChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
                     onClick={() => handleRoomSelect(room)}
                     className="relative flex cursor-pointer select-none items-center rounded-none px-2 py-1.5 text-sm outline-none transition-colors hover:bg-[oklch(0.3_0_0)] hover:text-white hover:border-2 hover:border-black data-[disabled]:pointer-events-none data-[disabled]:opacity-50 gap-3 border-2 border-transparent"
                   >
-                    <TokenAvatar 
+                    <TokenAvatar
                       tokenAddress={room.id}
                       tokenName={room.name}
                       size="sm"
-                      imageUrl={room.image}
                     />
                     <div className="flex-1">
                       <div className="font-semibold">{room.name}</div>
