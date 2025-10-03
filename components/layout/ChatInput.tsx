@@ -168,7 +168,7 @@ export default function ChatInput({ roomId }: Props) {
     }
 
           // Using selected token: SOL ↔ selected token
-    
+
           // 🚀 Token symbol extraction (separating actual token symbol from chat room name)
     const extractTokenSymbol = (name: string) => {
       // "USDC Trading Room" → "USDC"
@@ -176,17 +176,17 @@ export default function ChatInput({ roomId }: Props) {
               // "SOL/USDC Room" → "USDC" (last token)
       const words = name.split(' ');
       const firstWord = words[0];
-      
+
               // Common token symbols are 2-10 uppercase characters
       if (firstWord && firstWord.length <= 10 && /^[A-Z0-9]+$/.test(firstWord)) {
         return firstWord;
       }
-      
+
               // Use last 4 characters of contractAddress if failed
       return selectedToken.contractAddress.slice(-4).toUpperCase();
     };
-    
-    const tokenSymbol = extractTokenSymbol(selectedToken.name);
+
+    const tokenSymbol = selectedToken.symbol || extractTokenSymbol(selectedToken.name);
     
     const customTokenInfo = {
       address: selectedToken.contractAddress,
