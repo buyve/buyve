@@ -193,13 +193,34 @@ export class TokenPriceService {
 
   /**
    * 여러 토큰의 가격을 배치 UPSERT로 업데이트합니다 (Supabase 내장 기능 사용)
+   * 🎯 개선: DB 기반 캐시로 Jupiter API 호출 최소화 (30초 TTL)
    */
   async updateMultipleTokenPricesBatch(tokenAddresses: string[]): Promise<boolean> {
     if (tokenAddresses.length === 0) return true;
 
     try {
-      // 1. 배치로 가격 데이터 가져오기
-      const priceMap = await this.fetchBatchPrices(tokenAddresses);
+      // 🎯 0. DB 캐시 체크 (최근 30초 이내 데이터 확인)
+      const { data: recentData } = await supabase
+        .from('token_price_history')
+        .select('token_address, price, timestamp_1min')
+        .in('token_address', tokenAddresses)
+        .gte('timestamp_1min', new Date(Date.now() - 30000).toISOString()) // 30초 이내
+        .order('timestamp_1min', { ascending: false });
+
+      // 최근 데이터가 있는 토큰 제외
+      const recentTokens = new Set(recentData?.map(d => d.token_address) || []);
+      const needUpdateTokens = tokenAddresses.filter(t => !recentTokens.has(t));
+
+      // 모든 토큰이 최신 상태면 Jupiter 호출 스킵
+      if (needUpdateTokens.length === 0) {
+        console.log('✅ [DB Cache Hit] All prices are fresh (< 30s), skipping Jupiter API');
+        return true;
+      }
+
+      console.log(`🔄 [DB Cache Miss] ${needUpdateTokens.length}/${tokenAddresses.length} tokens need update from Jupiter`);
+
+      // 1. 캐시 미스된 토큰만 배치로 가격 데이터 가져오기
+      const priceMap = await this.fetchBatchPrices(needUpdateTokens);
       if (priceMap.size === 0) {
         return false;
       }
@@ -207,11 +228,11 @@ export class TokenPriceService {
       // 2. 현재 시간을 1분 단위로 정규화
       const timestamp1min = this.normalize1MinTimestamp(new Date());
 
-      // 3. 기존 데이터 확인
+      // 3. 기존 데이터 확인 (캐시 미스된 토큰만 체크)
       const { data: existingData } = await supabase
         .from('token_price_history')
         .select('*')
-        .in('token_address', tokenAddresses)
+        .in('token_address', needUpdateTokens)
         .eq('timestamp_1min', timestamp1min);
 
       const existingMap = new Map(
