@@ -167,8 +167,9 @@ class UnifiedPriceManager {
 
   // 🎯 통일된 가격 구독
   // 클라이언트가 subscribeToPrice를 호출하면 Supabase 채널 연결과
-  // 캐시된 최신 데이터 전달이 이뤄지고, 캐시가 비어 있으면 즉시 Jupiter 호출로 채웁니다.
+  // 캐시된 최신 데이터 전달이 이뤄지고, 캐시가 비어 있으면 DB에서 조회합니다.
   // 🚀 개선: 토큰당 하나의 채널만 생성하고 여러 구독자가 공유 (싱글톤 패턴)
+  // 🎯 최적화: Jupiter API 호출 제거, DB 데이터만 사용 (서버 cron이 주기적으로 업데이트)
   async subscribeToPrice(tokenAddress: string, callback: PriceUpdateCallback) {
     // 🎯 구독자 Set이 없으면 생성 (채널도 함께 생성)
     if (!this.priceSubscribers.has(tokenAddress)) {
@@ -188,8 +189,8 @@ class UnifiedPriceManager {
     if (cached) {
       callback(cached);
     } else {
-      // 캐시가 비어 있으면 즉시 Jupiter 호출로 채움
-      const priceData = await this.fetchUnifiedPrice(tokenAddress);
+      // 캐시가 비어 있으면 DB에서 조회 (Jupiter 호출 제거로 부하 감소)
+      const priceData = await this.fetchPriceFromDatabase(tokenAddress);
       if (priceData) {
         this.priceCache.set(tokenAddress, priceData);
         callback(priceData);
@@ -247,9 +248,8 @@ class UnifiedPriceManager {
   }
 
   // Supabase Realtime 채널 설정
-  // Supabase Realtime 채널을 구독하면서 1분 주기로 fetchUnifiedPrice를 재호출하여
-  // 캐시를 갱신하고, 프런트 구독자에게 브로드캐스트합니다.
-  // 🚀 개선: 이미 채널이 존재하면 생성하지 않음 (중복 방지)
+  // 🎯 개선: 서버 cron이 DB에 INSERT하면 postgres_changes 이벤트로 자동 수신
+  // 클라이언트는 Jupiter API 호출 없이 DB 이벤트만 구독 (부하 감소)
   private async setupPriceChannel(tokenAddress: string) {
     // 🎯 중복 방지: 이미 채널이 있으면 생성하지 않음
     if (this.channels.has(tokenAddress)) {
@@ -275,69 +275,31 @@ class UnifiedPriceManager {
           this.handleDatabaseUpdate(tokenAddress, payload.new);
         }
       )
-      .on(
-        'broadcast',
-        { event: 'price_update' },
-        (payload: any) => {
-          console.log(`📡 Broadcast received for ${tokenAddress}`);
-          this.handleRealtimeUpdate(tokenAddress, payload.payload);
-        }
-      )
       .subscribe((status) => {
         console.log(`✅ Channel subscription status for ${tokenAddress}:`, status);
       });
 
     this.channels.set(tokenAddress, channel);
-
-    // 1분 주기로 fetchUnifiedPrice를 재호출하여 캐시를 갱신하고, 프런트 구독자에게 브로드캐스트
-    const interval = setInterval(async () => {
-      console.log(`⏰ [Interval] 1-minute update for ${tokenAddress} (${this.priceSubscribers.get(tokenAddress)?.size || 0} subscribers)`);
-      const priceData = await this.fetchUnifiedPrice(tokenAddress);
-      if (priceData) {
-        this.priceCache.set(tokenAddress, priceData);
-        this.notifyPriceSubscribers(tokenAddress, priceData);
-
-        // 브로드캐스트로 다른 클라이언트에도 전파
-        await channel.send({
-          type: 'broadcast',
-          event: 'price_update',
-          payload: priceData
-        });
-      }
-    }, 60 * 1000);
-
-    this.updateIntervals.set(tokenAddress, interval);
-    console.log(`✅ [Channel Ready] ${tokenAddress} - Channel and interval created`);
+    console.log(`✅ [Channel Ready] ${tokenAddress} - Listening to DB events only`);
   }
 
   // 데이터베이스 업데이트 처리
-  // Supabase INSERT 이벤트가 발생하면 다시 Jupiter 쿼리로 값을 확정한 뒤 모든 구독자에게 재전파
+  // 🎯 개선: Supabase INSERT 이벤트가 발생하면 DB 데이터로 직접 업데이트 (Jupiter 호출 제거)
+  // 서버 cron이 이미 최신 가격을 DB에 저장했으므로 추가 API 호출 불필요
   private handleDatabaseUpdate(tokenAddress: string, data: Record<string, unknown>) {
     console.log(`💾 handleDatabaseUpdate called for ${tokenAddress}:`, data);
 
     // 새로운 OHLCV 데이터가 추가되면 차트 업데이트
     this.appendToChart(tokenAddress, data);
 
-    // 가격 데이터도 Jupiter 쿼리로 재확정하여 업데이트
-    this.fetchUnifiedPrice(tokenAddress).then(priceData => {
+    // 가격 데이터도 DB에서 직접 조회하여 업데이트 (Jupiter 호출 제거)
+    this.fetchPriceFromDatabase(tokenAddress).then(priceData => {
       if (priceData) {
         console.log(`✅ Price updated for ${tokenAddress}:`, priceData.price);
         this.priceCache.set(tokenAddress, priceData);
         this.notifyPriceSubscribers(tokenAddress, priceData);
       }
     });
-  }
-
-  // 실시간 브로드캐스트 업데이트 처리
-  // 서버가 브로드캐스트한 값이 있을 때 캐시와 구독자에게 즉시 반영해 사용자 화면을 갱신합니다.
-  private handleRealtimeUpdate(tokenAddress: string, data: Record<string, unknown>) {
-    const cached = this.priceCache.get(tokenAddress);
-    if (cached) {
-      const updated = { ...cached, ...data };
-      this.priceCache.set(tokenAddress, updated);
-      // 구독자에게 즉시 반영해 사용자 화면을 갱신
-      this.notifyPriceSubscribers(tokenAddress, updated);
-    }
   }
 
   // 통일된 차트 데이터 로드
@@ -470,11 +432,12 @@ class UnifiedPriceManager {
       console.log(`  ✓ Channel unsubscribed`);
     }
 
+    // 🎯 updateIntervals는 더 이상 사용하지 않지만 안전을 위해 체크
     const interval = this.updateIntervals.get(tokenAddress);
     if (interval) {
       clearInterval(interval);
       this.updateIntervals.delete(tokenAddress);
-      console.log(`  ✓ Interval cleared`);
+      console.log(`  ✓ Interval cleared (legacy)`);
     }
 
     this.priceSubscribers.delete(tokenAddress);
