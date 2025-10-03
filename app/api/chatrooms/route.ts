@@ -116,23 +116,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🎯 토큰 메타데이터 조회 (이미지 URL 추출)
+    // 🎯 토큰 메타데이터 및 이미지 조회 (여러 소스 시도)
     let tokenImageUrl: string | null = null;
     let tokenName = name; // 기본값으로 사용자 입력 이름 사용
-    
+
+    console.log(`\n🔍 [Chatroom Creation] Fetching metadata for token: ${contractAddress.trim()}`);
+
     try {
-      // 재시도 로직과 함께 메타데이터 조회
+      // 1. 메타데이터 조회 시도 (재시도 3회)
       const metadata = await fetchTokenMetadataWithRetry(contractAddress.trim(), 3);
-      
+
       if (metadata) {
+        console.log(`✅ [Metadata] Successfully fetched:`, {
+          name: metadata.name,
+          symbol: metadata.symbol,
+          image: metadata.image
+        });
+
         tokenImageUrl = metadata.image || null;
         // 메타데이터에서 이름이 있고 유의미하다면 사용
         if (metadata.name && metadata.name.trim() && metadata.name.trim() !== 'Unknown') {
           tokenName = metadata.name.trim();
         }
+      } else {
+        console.log(`⚠️ [Metadata] No metadata found from fetchTokenMetadataWithRetry`);
       }
-    } catch {
-      // 메타데이터 조회 실패해도 채팅방 생성은 계속 진행
+
+      // 2. 메타데이터에서 이미지를 못 가져왔다면 Jupiter API 시도
+      if (!tokenImageUrl) {
+        console.log(`🔄 [Jupiter] Trying Jupiter token list...`);
+        try {
+          const jupiterResponse = await fetch(
+            'https://cdn.jsdelivr.net/gh/solana-labs/token-list@main/src/tokens/solana.tokenlist.json'
+          );
+          if (jupiterResponse.ok) {
+            const jupiterData = await jupiterResponse.json();
+            const token = jupiterData.tokens.find((t: any) => t.address === contractAddress.trim());
+            if (token?.logoURI) {
+              console.log(`✅ [Jupiter] Found token image: ${token.logoURI}`);
+              tokenImageUrl = token.logoURI;
+              // Jupiter에서 토큰 이름도 가져오기
+              if (!metadata && token.name) {
+                tokenName = token.name;
+              }
+            } else {
+              console.log(`⚠️ [Jupiter] Token not found in Jupiter list`);
+            }
+          }
+        } catch (jupiterError) {
+          console.error('❌ [Jupiter] Failed to fetch token list:', jupiterError);
+        }
+      }
+
+      // 3. 여전히 이미지가 없다면 정적 이미지 소스 사용
+      if (!tokenImageUrl) {
+        // Jupiter static CDN 이미지
+        tokenImageUrl = `https://static.jup.ag/images/${contractAddress.trim()}.png`;
+        console.log(`🎯 [Fallback] Using static CDN image: ${tokenImageUrl}`);
+      }
+
+      console.log(`\n📝 [Final Result] Token Name: ${tokenName}, Image URL: ${tokenImageUrl}\n`);
+
+      // 🔥 IMPORTANT: tokenImageUrl은 절대 null이 되면 안됨 (DB 기본값 방지)
+      if (!tokenImageUrl || tokenImageUrl === '🎯') {
+        tokenImageUrl = `https://static.jup.ag/images/${contractAddress.trim()}.png`;
+        console.log(`⚠️ [Safety Check] Ensuring valid image URL: ${tokenImageUrl}`);
+      }
+    } catch (error) {
+      console.error('❌ [Error] Failed to fetch token metadata/image:', error);
+      // 완전 실패 시에도 정적 이미지 소스 사용
+      tokenImageUrl = `https://static.jup.ag/images/${contractAddress.trim()}.png`;
+      console.log(`🎯 [Fallback] Using static CDN image: ${tokenImageUrl}`);
     }
 
     // 트랜잭션 검증 (개발 환경에서는 일시적으로 비활성화)
@@ -151,7 +205,7 @@ export async function POST(request: NextRequest) {
     const newChatroom = {
       token_address: contractAddress.trim(),
       name: tokenName.trim(), // 메타데이터에서 가져온 이름 또는 사용자 입력
-      image: tokenImageUrl || '🎯', // 토큰 이미지 URL 또는 기본 이모지
+      image: tokenImageUrl, // 토큰 이미지 URL (null 허용)
       created_by: creatorAddress.trim(),
       creation_tx_signature: transactionSignature.trim(),
       created_at: new Date().toISOString()

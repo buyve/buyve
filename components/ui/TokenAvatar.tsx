@@ -23,14 +23,20 @@ interface TokenAvatarProps {
 
 // Jupiter 메타데이터 타입은 tokenImageFallback에서 가져옴
 
-export default function TokenAvatar({ 
-  tokenAddress, 
-  tokenName = 'Token', 
+export default function TokenAvatar({
+  tokenAddress,
+  tokenName = 'Token',
   size = 'md',
   className = '',
   imageUrl // 채팅방에서 전달받은 이미지 URL
 }: TokenAvatarProps) {
-  
+
+  console.log(`🎨 [TokenAvatar] Rendering for ${tokenName}:`, JSON.stringify({
+    tokenAddress,
+    imageUrl,
+    size
+  }, null, 2));
+
   const [imageError, setImageError] = useState(false);
   const [metaplexMetadata, setMetaplexMetadata] = useState<{
     name: string;
@@ -64,15 +70,17 @@ export default function TokenAvatar({
       try {
         // 1. 이미지 소스들 조회 (캐싱 적용)
         const sources = await fetchTokenImageWithFallbacks(tokenAddress, imageUrl);
-        
-        // 2. 최적화된 URL과 프록시 URL 추가
+
+        // 2. 원본 URL을 먼저 시도하고, 실패 시에만 최적화/프록시 시도
         const optimizedSources: string[] = [];
         sources.forEach(url => {
+          optimizedSources.push(url); // 원본을 먼저
           optimizedSources.push(getOptimizedImageUrl(url, iconSizes[size]));
           optimizedSources.push(getProxiedImageUrl(url));
-          optimizedSources.push(url); // 원본도 폴백으로
         });
-        
+
+        console.log(`📦 [TokenAvatar] Image sources for ${tokenName}:`, optimizedSources.slice(0, 6)); // First 6 sources
+
         setImageSources(optimizedSources);
         
         // 3. 첫 번째 이미지 프리로딩
@@ -110,17 +118,25 @@ export default function TokenAvatar({
   }, [imageSources]);
 
   const handleImageError = useCallback(() => {
+    console.log(`❌ [TokenAvatar] Image error for ${tokenName}:`, {
+      failedUrl: imageSources[currentUrlIndex],
+      currentIndex: currentUrlIndex,
+      totalSources: imageSources.length
+    });
+
     if (currentUrlIndex < imageSources.length - 1) {
       setCurrentUrlIndex(prev => prev + 1);
       // 다음 이미지 프리로딩
       const nextUrl = imageSources[currentUrlIndex + 1];
       if (nextUrl) {
+        console.log(`🔄 [TokenAvatar] Trying next source for ${tokenName}:`, nextUrl);
         ImageCacheManager.preload(nextUrl);
       }
     } else {
+      console.log(`💥 [TokenAvatar] All sources failed for ${tokenName}, showing fallback`);
       setImageError(true);
     }
-  }, [currentUrlIndex, imageSources]);
+  }, [currentUrlIndex, imageSources, tokenName]);
 
   // 토큰 이름의 첫 글자들을 폴백으로 사용
   const avatarFallback = getTokenAvatarFallback(

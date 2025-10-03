@@ -102,8 +102,9 @@ export default function ChatArea() {
     try {
       const response = await fetch('/api/chatrooms');
       const data = await response.json();
-      
-      
+
+      console.log('📥 [ChatArea] API Response:', JSON.stringify(data, null, 2));
+
       if (data.success && data.chatrooms) {
                   // Convert API data to UI format
         const formattedRooms: ChatRoom[] = data.chatrooms.map((room: ApiChatRoom) => ({
@@ -112,6 +113,18 @@ export default function ChatArea() {
                       image: room.image || '🪙', // Token image URL or default emoji
           contractAddress: room.contractAddress
         }));
+
+        console.log('🎨 [ChatArea] Formatted Rooms:', JSON.stringify(formattedRooms, null, 2));
+
+        // Sora 토큰 특별 확인
+        const soraRoom = formattedRooms.find(r => r.contractAddress === '48yjoFSJ8m6jgDorrYvwfxoLCPAuML9sGz975ZAJtbBY');
+        if (soraRoom) {
+          console.log('🎯 [ChatArea] Sora Token Data:', JSON.stringify({
+            name: soraRoom.name,
+            image: soraRoom.image,
+            contractAddress: soraRoom.contractAddress
+          }, null, 2));
+        }
         
         setChatRooms(formattedRooms);
         
@@ -235,10 +248,17 @@ export default function ChatArea() {
       return null;
     }
 
+    // 디버깅: 현재 선택된 방의 이미지 URL 콘솔에 출력
+    console.log('🖼️ [ChatArea Header] Rendering room:', JSON.stringify({
+      name: currentRoom.name,
+      image: currentRoom.image,
+      contractAddress: currentRoom.contractAddress
+    }, null, 2));
+
     return (
       <div className="flex items-center justify-between p-3 bg-[oklch(25%_0_0)] border-b-2 border-[oklch(0%_0_0)] shadow-[0px_4px_0px_0px_rgba(0,0,0,1)] relative z-10">
         <div className="flex items-center space-x-3">
-          <TokenAvatar 
+          <TokenAvatar
             tokenAddress={currentRoom.contractAddress}
             tokenName={currentRoom.name}
             size="md"

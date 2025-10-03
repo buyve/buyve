@@ -126,8 +126,8 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
       setStep('input');
 
       // Send chatroom list refresh event
-      window.dispatchEvent(new CustomEvent('Buyve roomCreated', { 
-        detail: { Buyveroom: data.chatroom } 
+      window.dispatchEvent(new CustomEvent('chatroomCreated', {
+        detail: { chatroom: data.chatroom }
       }));
 
     } catch (error) {
