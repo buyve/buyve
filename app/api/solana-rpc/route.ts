@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { connectionPool } from '@/lib/connectionPool';
 
 // 🚀 검증된 안정적인 RPC 엔드포인트만 선별
 const RPC_ENDPOINTS = [
   // Tier 1: 사용자 지정 Alchemy RPC (최우선)
   'https://mainnet.helius-rpc.com/?api-key=d0c461b2-279b-41ed-9a00-93952a97afd0',
   'https://solana-mainnet.g.alchemy.com/v2/CLIspK_3J2GVAuweafRIUoHzWjyn07rz',
-  
+
   // Tier 2: 환경 변수 백업
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL,
-  
+
   // Tier 3: 검증된 무료 서비스들
   'https://rpc.ankr.com/solana',
   'https://solana-mainnet.g.alchemy.com/v2/demo', // Alchemy 데모
-  
+
   // Tier 4: 백업용 (응답 속도는 느리지만 안정적)
   'https://mainnet.rpcpool.com',
-  
+
   // Tier 5: 공식 솔라나 (마지막 백업용 - 제한이 있음)
   'https://api.mainnet-beta.solana.com',
 ].filter(Boolean); // undefined 값 제거
@@ -24,6 +25,7 @@ let currentEndpointIndex = 0;
 let lastSuccessfulEndpoint: string | null = null;
 let requestCount = 0;
 let lastSuccessTime = 0;
+let poolRequestCount = 0; // Connection Pool 사용 횟수 추적
 
 // 🚫 실패 엔드포인트 블랙리스트 시스템 (모든 실패 유형 포함)
 const failureBlacklist = new Map<string, { 
@@ -157,6 +159,113 @@ function getPreferredEndpoint(): string | null {
   return null;
 }
 
+// 🎯 Connection Pool을 사용한 RPC 요청 (Web3.js 방식)
+async function makePooledRpcRequest(body: unknown): Promise<unknown> {
+  const requestBody = body as { method?: string; params?: unknown[]; id?: string | number };
+
+  // 🎯 getLatestBlockhash 요청에 대한 캐시 처리
+  if (requestBody?.method === 'getLatestBlockhash') {
+    const now = Date.now();
+
+    // 캐시된 블록해시가 유효한지 확인
+    if (blockhashCache &&
+        (now - blockhashCache.cachedAt) < BLOCKHASH_CACHE_DURATION &&
+        !isBlacklisted(blockhashCache.endpoint)) {
+      poolRequestCount++;
+      console.log(`[Pool] ✅ Blockhash cache hit (${poolRequestCount} total pool requests)`);
+      return {
+        jsonrpc: '2.0',
+        id: requestBody.id,
+        result: {
+          context: { slot: blockhashCache.lastValidBlockHeight },
+          value: {
+            blockhash: blockhashCache.blockhash,
+            lastValidBlockHeight: blockhashCache.lastValidBlockHeight
+          }
+        }
+      };
+    }
+  }
+
+  try {
+    // Connection Pool에서 Connection 가져오기
+    const connection = connectionPool.getConnection();
+    poolRequestCount++;
+
+    const method = requestBody?.method;
+    const params = requestBody?.params || [];
+
+    let result;
+
+    // 주요 메서드들을 Web3.js Connection 메서드로 매핑
+    switch (method) {
+      case 'getLatestBlockhash':
+        result = await connection.getLatestBlockhash(params[0] as never);
+        // 블록해시 캐싱
+        if (result) {
+          const poolStatus = connectionPool.getStatus();
+          blockhashCache = {
+            blockhash: result.blockhash,
+            lastValidBlockHeight: result.lastValidBlockHeight,
+            cachedAt: Date.now(),
+            endpoint: poolStatus.rpcUrl
+          };
+        }
+        break;
+
+      case 'getSlot':
+        result = await connection.getSlot(params[0] as never);
+        break;
+
+      case 'getBlockHeight':
+        result = await connection.getBlockHeight(params[0] as never);
+        break;
+
+      case 'getBalance':
+        result = await connection.getBalance(params[0] as never, params[1] as never);
+        break;
+
+      case 'getAccountInfo':
+        result = await connection.getAccountInfo(params[0] as never, params[1] as never);
+        break;
+
+      case 'getParsedAccountInfo':
+        result = await connection.getParsedAccountInfo(params[0] as never, params[1] as never);
+        break;
+
+      case 'getSignatureStatus':
+        result = await connection.getSignatureStatus(params[0] as never, params[1] as never);
+        break;
+
+      case 'getAddressLookupTable':
+        result = await connection.getAddressLookupTable(params[0] as never);
+        break;
+
+      case 'getParsedTokenAccountsByOwner':
+        result = await connection.getParsedTokenAccountsByOwner(params[0] as never, params[1] as never, params[2] as never);
+        break;
+
+      // 기타 메서드는 fetch로 폴백
+      default:
+        console.log(`[Pool] Method ${method} not mapped, falling back to fetch`);
+        return makeRpcRequest(body, 0);
+    }
+
+    console.log(`[Pool] ✅ Request via pool: ${method} (${poolRequestCount} total)`);
+
+    return {
+      jsonrpc: '2.0',
+      id: requestBody.id,
+      result
+    };
+
+  } catch (error) {
+    console.error('[Pool] Connection pool request failed, falling back to fetch:', error);
+    // Pool 실패 시 기존 fetch 방식으로 폴백
+    return makeRpcRequest(body, 0);
+  }
+}
+
 // RPC 요청을 서버에서 처리 (모든 실패 유형 블랙리스트 적용)
 async function makeRpcRequest(body: unknown, retryCount = 0): Promise<unknown> {
   if (retryCount >= MAX_RETRIES) {
@@ -167,9 +276,9 @@ async function makeRpcRequest(body: unknown, retryCount = 0): Promise<unknown> {
   const requestBody = body as { method?: string; id?: string | number };
   if (requestBody?.method === 'getLatestBlockhash') {
     const now = Date.now();
-    
+
     // 캐시된 블록해시가 유효한지 확인
-    if (blockhashCache && 
+    if (blockhashCache &&
         (now - blockhashCache.cachedAt) < BLOCKHASH_CACHE_DURATION &&
         !isBlacklisted(blockhashCache.endpoint)) {
       return {
@@ -311,24 +420,26 @@ async function makeRpcRequest(body: unknown, retryCount = 0): Promise<unknown> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    const result = await makeRpcRequest(body);
-    
+
+    // 🎯 먼저 Connection Pool 시도
+    const result = await makePooledRpcRequest(body);
+
     return NextResponse.json(result);
-    
+
   } catch (error) {
-    
+
     return NextResponse.json(
-      { 
-        error: { 
-          code: -32603, 
+      {
+        error: {
+          code: -32603,
           message: error instanceof Error ? error.message : 'Internal error',
           details: {
             requestCount,
+            poolRequestCount,
             lastSuccessfulEndpoint,
             currentIndex: currentEndpointIndex
           }
-        } 
+        }
       },
       { status: 500 }
     );
@@ -343,9 +454,9 @@ export async function GET() {
       id: 'health',
       method: 'getSlot'
     };
-    
-    const result = await makeRpcRequest(healthCheck);
-    
+
+    const result = await makePooledRpcRequest(healthCheck);
+
     // 블랙리스트 정보 생성
     const blacklistInfo = Array.from(failureBlacklist.entries()).map(([endpoint, failure]) => ({
       endpoint,
@@ -354,23 +465,29 @@ export async function GET() {
       blockedUntil: new Date(failure.blockedUntil).toISOString(),
       remainingMs: Math.max(0, failure.blockedUntil - Date.now())
     }));
-    
+
+    // Connection Pool 상태
+    const poolStatus = connectionPool.getStatus();
+
     return NextResponse.json({
       status: 'healthy',
+      connectionPool: poolStatus,
       currentEndpoint: RPC_ENDPOINTS[currentEndpointIndex],
       lastSuccessful: lastSuccessfulEndpoint,
       requestCount,
+      poolRequestCount,
       allEndpoints: RPC_ENDPOINTS,
       failureBlacklist: blacklistInfo,
       result
     });
-    
+
   } catch (error) {
     return NextResponse.json(
-      { 
-        status: 'unhealthy', 
+      {
+        status: 'unhealthy',
         error: error instanceof Error ? error.message : 'Unknown error',
         requestCount,
+        poolRequestCount,
         triedEndpoints: RPC_ENDPOINTS.slice(0, currentEndpointIndex + 1),
         failureBlacklist: Array.from(failureBlacklist.entries()).map(([endpoint, failure]) => ({
           endpoint,
