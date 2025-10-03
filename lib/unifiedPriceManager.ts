@@ -168,12 +168,19 @@ class UnifiedPriceManager {
   // 🎯 통일된 가격 구독
   // 클라이언트가 subscribeToPrice를 호출하면 Supabase 채널 연결과
   // 캐시된 최신 데이터 전달이 이뤄지고, 캐시가 비어 있으면 즉시 Jupiter 호출로 채웁니다.
+  // 🚀 개선: 토큰당 하나의 채널만 생성하고 여러 구독자가 공유 (싱글톤 패턴)
   async subscribeToPrice(tokenAddress: string, callback: PriceUpdateCallback) {
+    // 🎯 구독자 Set이 없으면 생성 (채널도 함께 생성)
     if (!this.priceSubscribers.has(tokenAddress)) {
       this.priceSubscribers.set(tokenAddress, new Set());
+      // 첫 구독자만 채널 생성 (이후 구독자는 기존 채널 재사용)
       await this.setupPriceChannel(tokenAddress);
+      console.log(`✅ [Singleton] First subscriber for ${tokenAddress} - Channel created`);
+    } else {
+      console.log(`♻️ [Singleton] Reusing existing channel for ${tokenAddress} (${this.priceSubscribers.get(tokenAddress)!.size} subscribers)`);
     }
 
+    // 구독자 추가
     this.priceSubscribers.get(tokenAddress)!.add(callback);
 
     // 캐시된 최신 데이터 전달
@@ -194,8 +201,21 @@ class UnifiedPriceManager {
       const subscribers = this.priceSubscribers.get(tokenAddress);
       if (subscribers) {
         subscribers.delete(callback);
+        console.log(`🔕 [Unsubscribe] ${tokenAddress}: ${subscribers.size} subscribers remaining`);
+
+        // 🎯 마지막 구독자가 떠날 때만 채널 정리 (30초 딜레이로 재구독 대비)
         if (subscribers.size === 0) {
-          this.cleanupPriceChannel(tokenAddress);
+          console.log(`⏳ [Cleanup Scheduled] ${tokenAddress} - Will cleanup in 30s if no new subscribers`);
+          setTimeout(() => {
+            // 30초 후에도 여전히 구독자가 없으면 정리
+            const currentSubscribers = this.priceSubscribers.get(tokenAddress);
+            if (currentSubscribers && currentSubscribers.size === 0) {
+              console.log(`🧹 [Cleanup] ${tokenAddress} - No subscribers, cleaning up channel`);
+              this.cleanupPriceChannel(tokenAddress);
+            } else {
+              console.log(`↩️ [Cleanup Cancelled] ${tokenAddress} - New subscribers joined`);
+            }
+          }, 30000);
         }
       }
     };
@@ -229,8 +249,15 @@ class UnifiedPriceManager {
   // Supabase Realtime 채널 설정
   // Supabase Realtime 채널을 구독하면서 1분 주기로 fetchUnifiedPrice를 재호출하여
   // 캐시를 갱신하고, 프런트 구독자에게 브로드캐스트합니다.
+  // 🚀 개선: 이미 채널이 존재하면 생성하지 않음 (중복 방지)
   private async setupPriceChannel(tokenAddress: string) {
-    console.log(`🔔 Setting up Realtime channel for ${tokenAddress}`);
+    // 🎯 중복 방지: 이미 채널이 있으면 생성하지 않음
+    if (this.channels.has(tokenAddress)) {
+      console.log(`♻️ [Channel Reuse] ${tokenAddress} - Channel already exists`);
+      return;
+    }
+
+    console.log(`🔔 [Channel Create] Setting up Realtime channel for ${tokenAddress}`);
 
     const channel = supabase
       .channel(`unified_price:${tokenAddress}`)
@@ -264,7 +291,7 @@ class UnifiedPriceManager {
 
     // 1분 주기로 fetchUnifiedPrice를 재호출하여 캐시를 갱신하고, 프런트 구독자에게 브로드캐스트
     const interval = setInterval(async () => {
-      console.log(`⏰ 1-minute interval update for ${tokenAddress}`);
+      console.log(`⏰ [Interval] 1-minute update for ${tokenAddress} (${this.priceSubscribers.get(tokenAddress)?.size || 0} subscribers)`);
       const priceData = await this.fetchUnifiedPrice(tokenAddress);
       if (priceData) {
         this.priceCache.set(tokenAddress, priceData);
@@ -280,6 +307,7 @@ class UnifiedPriceManager {
     }, 60 * 1000);
 
     this.updateIntervals.set(tokenAddress, interval);
+    console.log(`✅ [Channel Ready] ${tokenAddress} - Channel and interval created`);
   }
 
   // 데이터베이스 업데이트 처리
@@ -424,21 +452,34 @@ class UnifiedPriceManager {
   }
 
   // 채널 정리
+  // 🚀 개선: 정리 전에 구독자 수 확인 (안전장치)
   private cleanupPriceChannel(tokenAddress: string) {
+    // 🎯 안전장치: 구독자가 있으면 정리하지 않음
+    const subscribers = this.priceSubscribers.get(tokenAddress);
+    if (subscribers && subscribers.size > 0) {
+      console.log(`⚠️ [Cleanup Aborted] ${tokenAddress} - Still has ${subscribers.size} subscribers`);
+      return;
+    }
+
+    console.log(`🧹 [Cleanup Start] ${tokenAddress}`);
+
     const channel = this.channels.get(tokenAddress);
     if (channel) {
       channel.unsubscribe();
       this.channels.delete(tokenAddress);
+      console.log(`  ✓ Channel unsubscribed`);
     }
 
     const interval = this.updateIntervals.get(tokenAddress);
     if (interval) {
       clearInterval(interval);
       this.updateIntervals.delete(tokenAddress);
+      console.log(`  ✓ Interval cleared`);
     }
 
     this.priceSubscribers.delete(tokenAddress);
     this.priceCache.delete(tokenAddress);
+    console.log(`✅ [Cleanup Complete] ${tokenAddress} - All resources freed`);
   }
 
   // 🎯 DB에 등록된 모든 코인 가격을 일괄 구독
