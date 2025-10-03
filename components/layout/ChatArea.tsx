@@ -262,7 +262,6 @@ export default function ChatArea() {
             tokenAddress={currentRoom.contractAddress}
             tokenName={currentRoom.name}
             size="md"
-            imageUrl={currentRoom.image}
           />
           <div className="flex flex-col flex-1">
             <h3 className="font-bold text-lg text-[oklch(0.9249_0_0)]">{currentRoom.name}</h3>

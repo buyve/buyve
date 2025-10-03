@@ -674,11 +674,10 @@ export default function MobilePutter() {
                       onClick={() => handleRoomSelect(room)}
                       className="w-full p-3 text-left bg-[oklch(0.2393_0_0)] hover:bg-[oklch(0.3_0_0)] transition-colors border-2 border-black rounded-none flex items-center gap-3"
                     >
-                      <TokenAvatar 
+                      <TokenAvatar
                         tokenAddress={room.id}
                         tokenName={room.name}
                         size="md"
-                        imageUrl={room.image}
                       />
                       <div className="flex-1">
                         <div className="font-semibold text-white">{room.name}</div>
