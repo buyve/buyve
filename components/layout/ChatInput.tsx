@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo as useReactMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { useChatMessages, addMessage } from '@/hooks/useChatMessages';
 import { useMemo } from '@/hooks/useMemoTransaction';
@@ -136,16 +136,32 @@ export default function ChatInput({ roomId }: Props) {
     clearError,
   } = useMemo();
 
-  // Solana connection settings
-  const connection = new Connection(
-    process.env.NEXT_PUBLIC_SOLANA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || 'https://solana-mainnet.g.alchemy.com/v2/***REMOVED_ALCHEMY_KEY***', 
-    { 
-      commitment: 'confirmed',
-      confirmTransactionInitialTimeout: 60000,
-      wsEndpoint: undefined, // WebSocket disabled
-      disableRetryOnRateLimit: false,
+  // 🎯 Solana connection settings (프록시 사용으로 자동 Connection Pool 활용)
+  const connection = useReactMemo(() => {
+    // 브라우저 환경: 프록시를 통해 자동으로 Connection Pool 사용
+    if (typeof window !== 'undefined') {
+      return new Connection(
+        `${window.location.origin}/api/solana-rpc`,
+        {
+          commitment: 'confirmed',
+          confirmTransactionInitialTimeout: 90000,
+          disableRetryOnRateLimit: true,
+          wsEndpoint: undefined, // WebSocket disabled
+        }
+      );
     }
-  );
+
+    // 서버 환경 (폴백)
+    return new Connection(
+      process.env.NEXT_PUBLIC_RPC_URL || 'https://solana-mainnet.g.alchemy.com/v2/***REMOVED_ALCHEMY_KEY***',
+      {
+        commitment: 'confirmed',
+        confirmTransactionInitialTimeout: 90000,
+        wsEndpoint: undefined,
+        disableRetryOnRateLimit: true,
+      }
+    );
+  }, []);
 
   // Default token address constants
   const SOL_TOKEN_ADDRESS = 'So11111111111111111111111111111111111111112';
