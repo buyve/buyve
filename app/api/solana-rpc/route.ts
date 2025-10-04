@@ -3,11 +3,9 @@ import { connectionPool } from '@/lib/connectionPool';
 
 // 🚀 검증된 안정적인 RPC 엔드포인트만 선별
 const RPC_ENDPOINTS = [
-  // Tier 1: 사용자 지정 Alchemy RPC (최우선)
-  'https://mainnet.helius-rpc.com/?api-key=d0c461b2-279b-41ed-9a00-93952a97afd0',
-  'https://solana-mainnet.g.alchemy.com/v2/CLIspK_3J2GVAuweafRIUoHzWjyn07rz',
-
-  // Tier 2: 환경 변수 백업
+  // Tier 1: 환경변수에서 로드 (최우선)
+  process.env.NEXT_PUBLIC_HELIUS_RPC_URL,
+  process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL,
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL,
 
   // Tier 3: 검증된 무료 서비스들
