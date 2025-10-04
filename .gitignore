@@ -67,3 +67,4 @@ node_modules/
 tasks.json
 tasks/ 
 .vercel
+server.env
