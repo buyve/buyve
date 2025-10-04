@@ -213,11 +213,8 @@ export class TokenPriceService {
 
       // 모든 토큰이 최신 상태면 Jupiter 호출 스킵
       if (needUpdateTokens.length === 0) {
-        console.log('✅ [DB Cache Hit] All prices are fresh (< 30s), skipping Jupiter API');
         return true;
       }
-
-      console.log(`🔄 [DB Cache Miss] ${needUpdateTokens.length}/${tokenAddresses.length} tokens need update from Jupiter`);
 
       // 1. 캐시 미스된 토큰만 배치로 가격 데이터 가져오기
       const priceMap = await this.fetchBatchPrices(needUpdateTokens);

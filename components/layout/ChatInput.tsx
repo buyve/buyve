@@ -538,7 +538,6 @@ export default function ChatInput({ roomId }: Props) {
           );
 
           const candidateSize = candidateMessage.serialize().length;
-          console.debug('Versioned swap candidate size', candidateSize);
 
           if (candidateSize >= PACKET_DATA_SIZE_LIMIT) {
             useAuxiliaryTransaction = true;
@@ -549,7 +548,6 @@ export default function ChatInput({ roomId }: Props) {
 
         const finalMessageSize = messageForSwap.serialize().length;
         transactionForSigning = new VersionedTransaction(messageForSwap);
-        console.debug('Versioned swap final size', finalMessageSize, 'usingAuxTx', useAuxiliaryTransaction);
         if (finalMessageSize >= PACKET_DATA_SIZE_LIMIT) {
           console.warn('Swap message size still high after adjustments', finalMessageSize);
         }
@@ -575,7 +573,6 @@ export default function ChatInput({ roomId }: Props) {
         let useAuxiliaryTransaction = false;
 
         const messageSize = legacyTransaction.serializeMessage().length;
-        console.debug('Legacy swap message size', messageSize);
 
         if (messageSize >= PACKET_DATA_SIZE_LIMIT) {
           useAuxiliaryTransaction = true;
@@ -590,13 +587,6 @@ export default function ChatInput({ roomId }: Props) {
             auxiliaryInstructions.push(memoInstruction);
           }
         }
-
-        console.debug(
-          'Legacy swap final size',
-          legacyTransaction.serializeMessage().length,
-          'usingAuxTx',
-          useAuxiliaryTransaction
-        );
 
         legacyTransaction.recentBlockhash = blockhash;
         legacyTransaction.feePayer = publicKey; // explicitly specify if not set
@@ -644,7 +634,6 @@ export default function ChatInput({ roomId }: Props) {
             }
           );
 
-          console.debug('Auxiliary transaction sent', auxiliaryTxId);
         } catch (auxError) {
           console.error('Auxiliary transaction failed', auxError);
         }

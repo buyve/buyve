@@ -33,8 +33,6 @@ class ConnectionPool {
   private initialize() {
     if (this.isInitialized) return;
 
-    console.log(`[ConnectionPool] Initializing ${this.config.maxSize} connections...`);
-
     for (let i = 0; i < this.config.maxSize; i++) {
       const connection = new Connection(this.config.rpcUrl, {
         commitment: this.config.commitment,
@@ -61,7 +59,6 @@ class ConnectionPool {
     }
 
     this.isInitialized = true;
-    console.log(`[ConnectionPool] ✅ ${this.pool.length} connections ready`);
   }
 
   /**
@@ -98,7 +95,6 @@ class ConnectionPool {
     this.pool = [];
     this.currentIndex = 0;
     this.isInitialized = false;
-    console.log('[ConnectionPool] Reset completed');
   }
 }
 

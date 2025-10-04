@@ -70,10 +70,6 @@ export function useWalletInternal() {
     const profileNickname = profile?.nickname || '';
     const rawAvatar = profile?.avatar_url;
     
-    // 로깅을 줄임 (너무 많은 로그 발생)
-    if (profile) {
-      console.log('[WALLET HOOK] Processing profile:', { nickname: profileNickname, avatar_url: rawAvatar });
-    }
     
     let processedAvatar = DEFAULT_AVATARS[0]; // 기본값
     
@@ -159,41 +155,35 @@ export function useWalletInternal() {
   const loadProfile = useCallback(async (walletAddress: string) => {
     // 이미 로드 중인 주소는 건너뛰기
     if (loadingProfiles.has(walletAddress)) {
-      console.log(`[LOAD PROFILE] Already loading profile for: ${walletAddress}`);
       return;
     }
-    
+
     loadingProfiles.add(walletAddress);
     setIsLoadingProfile(true);
     setError(null);
-    
+
     try {
-      console.log(`[LOAD PROFILE] Starting load for wallet: ${walletAddress}`);
       const headers: HeadersInit = {};
-      
+
       // 토큰이 있으면 Authorization 헤더 추가
       const token = authToken || localStorage.getItem('authToken');
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(`/api/profiles?wallet_address=${encodeURIComponent(walletAddress)}`, {
         headers,
         credentials: 'include'
       });
-      
-      console.log(`[LOAD PROFILE] Response status: ${response.status}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const result = await response.json();
-      console.log(`[LOAD PROFILE] API result:`, result);
-      
+
       if (result.success) {
         if (result.profile) {
-          console.log('[LOAD PROFILE] Setting profile with data:', result.profile);
           setProfile(result.profile);
           
           // 프로필 이미지 프리로딩
@@ -311,27 +301,24 @@ export function useWalletInternal() {
   // 잔고 조회
   const fetchBalance = useCallback(async () => {
     if (!publicKey || !connection) return;
-    
+
     setIsLoadingBalance(true);
     const maxRetries = 3;
     let lastError: any = null;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[Balance] Attempting to fetch balance (attempt ${attempt}/${maxRetries})`);
         const balance = await connection.getBalance(publicKey);
         setBalance(balance / LAMPORTS_PER_SOL);
         setError(null);
         setIsLoadingBalance(false);
-        console.log(`[Balance] Successfully fetched balance: ${balance / LAMPORTS_PER_SOL} SOL`);
         return;
       } catch (error) {
         lastError = error;
         console.error(`[Balance] Attempt ${attempt} failed:`, error);
-        
+
         if (attempt < maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-          console.log(`[Balance] Retrying in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -401,21 +388,19 @@ export function useWalletInternal() {
       // 로컬 스토리지에서 토큰 확인
       const storedToken = localStorage.getItem('authToken');
       if (!storedToken) {
-        console.log('No stored auth token found');
         return false;
       }
-      
+
       const response = await fetch('/api/auth/verify', {
         headers: {
           'Authorization': `Bearer ${storedToken}`
         },
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         if (result.valid && result.walletAddress === walletAddress && result.profile) {
-          console.log('Found existing valid authentication for:', walletAddress);
           setProfile(result.profile);
           setAuthToken(storedToken);
           return true;
@@ -444,10 +429,8 @@ export function useWalletInternal() {
       if (connected && address) {
         // 이미 동일한 주소에 대한 인증 Promise가 진행 중이면 기다림
         if (authenticationPromises.has(address)) {
-          console.log('Authentication promise already exists for:', address, '- waiting for completion');
           try {
             await authenticationPromises.get(address);
-            console.log('Authentication promise completed for:', address);
             fetchBalance();
             return;
           } catch (error) {
@@ -455,10 +438,9 @@ export function useWalletInternal() {
             authenticationPromises.delete(address);
           }
         }
-        
+
         // 이미 인증 진행 중이면 스킵 (추가 보안)
         if (authenticatingAddresses.has(address)) {
-          console.log('Authentication already in progress for:', address);
           return;
         }
         
@@ -467,30 +449,26 @@ export function useWalletInternal() {
           try {
             // 1. 먼저 기존 인증 상태 확인 (쿠키의 JWT 토큰)
             const hasValidAuth = await checkExistingAuth(address);
-            
+
             if (hasValidAuth) {
-              console.log('Using existing authentication for:', address);
               completedAddresses.add(address);
               return;
             }
-            
+
             // 2. 이미 완료된 경우 프로필만 로드
             if (completedAddresses.has(address)) {
-              console.log('Authentication already completed, loading profile for:', address);
               await loadProfile(address);
               return;
             }
-            
+
             // 3. 새로운 인증 필요
-            console.log('Starting new wallet authentication for:', address);
             authenticatingAddresses.add(address);
-            
+
             try {
               await authenticateWallet(address);
               // 인증 성공 후 프로필 로드
               await loadProfile(address);
               completedAddresses.add(address);
-              console.log('Wallet authentication completed for:', address);
             } finally {
               authenticatingAddresses.delete(address);
             }

@@ -13,13 +13,11 @@ export function setupSocketHandlers(io: Server) {
   setInterval(() => {
     const connectionCount = io.engine.clientsCount;
     const roomCount = userRooms.size;
-    console.log(`📊 [Socket.IO Stats] Connections: ${connectionCount}/${MAX_CONNECTIONS}, Active Users: ${roomCount}`);
   }, 60000);
 
   io.on('connection', (socket: Socket) => {
     // 🎯 1. 연결 수 제한 체크
     if (io.engine.clientsCount > MAX_CONNECTIONS) {
-      console.log(`⚠️ [Connection Rejected] Max connections (${MAX_CONNECTIONS}) reached`);
       socket.emit('error', {
         message: 'Server at capacity. Please try again later.',
         code: 'MAX_CONNECTIONS'
@@ -30,7 +28,6 @@ export function setupSocketHandlers(io: Server) {
 
     // 🎯 2. 사용자 ID 추출 (인증 정보 또는 socket.id 사용)
     const userId = socket.handshake.auth?.userId || socket.id;
-    console.log(`✅ [Connected] User: ${userId.slice(0, 8)}..., Socket: ${socket.id.slice(0, 8)}...`);
 
     // 🎯 3. 연결 타임아웃 설정 (비정상 연결 방지)
     socket.setTimeout(CONNECTION_TIMEOUT);
@@ -41,7 +38,6 @@ export function setupSocketHandlers(io: Server) {
       const rooms = userRooms.get(userId) || new Set<string>();
 
       if (rooms.size >= MAX_ROOMS_PER_USER) {
-        console.log(`⚠️ [Join Rejected] User ${userId.slice(0, 8)} exceeded max rooms (${MAX_ROOMS_PER_USER})`);
         socket.emit('error', {
           message: `Maximum ${MAX_ROOMS_PER_USER} rooms per user`,
           code: 'MAX_ROOMS'
@@ -53,8 +49,6 @@ export function setupSocketHandlers(io: Server) {
       socket.join(`room:${roomId}`);
       rooms.add(roomId);
       userRooms.set(userId, rooms);
-
-      console.log(`🚪 [Join] User ${userId.slice(0, 8)} joined room ${roomId} (${rooms.size} rooms total)`);
 
       // 참가 알림 (선택적)
       socket.to(`room:${roomId}`).emit('user_joined', {
@@ -76,8 +70,6 @@ export function setupSocketHandlers(io: Server) {
           userRooms.delete(userId);
         }
       }
-
-      console.log(`🚪 [Leave] User ${userId.slice(0, 8)} left room ${roomId}`);
 
       // 나가기 알림 (선택적)
       socket.to(`room:${roomId}`).emit('user_left', {
@@ -108,17 +100,13 @@ export function setupSocketHandlers(io: Server) {
 
     // 🎯 연결 해제 (자동 정리)
     socket.on('disconnect', (reason: string) => {
-      console.log(`🔌 [Disconnect] User ${userId.slice(0, 8)}, Reason: ${reason}`);
-
       // 🎯 모든 방에서 자동으로 나가기
       const rooms = userRooms.get(userId);
       if (rooms) {
         rooms.forEach(roomId => {
           socket.leave(`room:${roomId}`);
-          console.log(`  ✓ Auto-left room: ${roomId}`);
         });
         userRooms.delete(userId);
-        console.log(`  ✓ Cleaned up ${rooms.size} rooms for user`);
       }
     });
 
@@ -134,17 +122,14 @@ export function setupSocketHandlers(io: Server) {
 
     // 🎯 타임아웃 핸들링
     socket.on('timeout', () => {
-      console.log(`⏱️ [Timeout] User ${userId.slice(0, 8)} - Disconnecting inactive connection`);
       socket.disconnect(true);
     });
   });
 
   // 🎯 서버 종료 시 정리
   process.on('SIGTERM', () => {
-    console.log('🛑 [Shutdown] Cleaning up Socket.IO connections...');
     userRooms.clear();
     io.close(() => {
-      console.log('✅ [Shutdown] All connections closed');
     });
   });
 } 

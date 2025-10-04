@@ -31,12 +31,6 @@ export default function TokenAvatar({
   imageUrl // 채팅방에서 전달받은 이미지 URL
 }: TokenAvatarProps) {
 
-  console.log(`🎨 [TokenAvatar] Rendering for ${tokenName}:`, JSON.stringify({
-    tokenAddress,
-    imageUrl,
-    size
-  }, null, 2));
-
   const [imageError, setImageError] = useState(false);
   const [metaplexMetadata, setMetaplexMetadata] = useState<{
     name: string;
@@ -79,8 +73,6 @@ export default function TokenAvatar({
           optimizedSources.push(getProxiedImageUrl(url));
         });
 
-        console.log(`📦 [TokenAvatar] Image sources for ${tokenName}:`, optimizedSources.slice(0, 6)); // First 6 sources
-
         setImageSources(optimizedSources);
         
         // 3. 첫 번째 이미지 프리로딩
@@ -118,22 +110,14 @@ export default function TokenAvatar({
   }, [imageSources]);
 
   const handleImageError = useCallback(() => {
-    console.log(`❌ [TokenAvatar] Image error for ${tokenName}:`, {
-      failedUrl: imageSources[currentUrlIndex],
-      currentIndex: currentUrlIndex,
-      totalSources: imageSources.length
-    });
-
     if (currentUrlIndex < imageSources.length - 1) {
       setCurrentUrlIndex(prev => prev + 1);
       // 다음 이미지 프리로딩
       const nextUrl = imageSources[currentUrlIndex + 1];
       if (nextUrl) {
-        console.log(`🔄 [TokenAvatar] Trying next source for ${tokenName}:`, nextUrl);
         ImageCacheManager.preload(nextUrl);
       }
     } else {
-      console.log(`💥 [TokenAvatar] All sources failed for ${tokenName}, showing fallback`);
       setImageError(true);
     }
   }, [currentUrlIndex, imageSources, tokenName]);

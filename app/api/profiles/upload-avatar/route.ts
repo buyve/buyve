@@ -124,11 +124,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Successfully updated profile with avatar:', {
-      wallet_address: walletAddress,
-      avatar_url: publicUrl
-    });
-
     return NextResponse.json({
       success: true,
       avatar_url: publicUrl,

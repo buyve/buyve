@@ -52,21 +52,13 @@ function MobileWalletProfile() {
     balance,
     isLoadingBalance,
     error,
-    connectWallet, 
-    disconnectWallet, 
+    connectWallet,
+    disconnectWallet,
     updateProfile,
     fetchBalance,
     clearError
   } = useWallet();
-  
-  console.log('[MOBILE WALLET PROFILE] Component values:', {
-    isConnected,
-    address,
-    nickname,
-    avatar,
-    balance,
-    error
-  });
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [tempNickname, setTempNickname] = useState('');
   const [tempAvatar, setTempAvatar] = useState('');
@@ -322,10 +314,6 @@ function MobileWalletProfile() {
                         objectFit: 'cover',
                         borderRadius: '0px',
                         display: 'block'
-                      }}
-                      onLoad={() => {
-                      }}
-                      onError={() => {
                       }}
                     />
                   ) : (

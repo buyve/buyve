@@ -13,8 +13,6 @@ import type { UnifiedPriceData } from '@/lib/unifiedPriceManager';
 export function subscribeAllTokensExample() {
   const unsubscribe = unifiedPriceManager.subscribeToAllRegisteredTokens(
     (tokenAddress, priceData) => {
-      console.log(`[${priceData.symbol}] $${priceData.price.toFixed(6)} (${priceData.priceChangePercent.toFixed(2)}%)`);
-
       // 여기서 UI 업데이트
       // 예: setTokenPrices(prev => ({ ...prev, [tokenAddress]: priceData }))
     }
@@ -36,7 +34,7 @@ export function subscribeSelectedTokensExample() {
   const unsubscribe = unifiedPriceManager.subscribeToTokenList(
     selectedTokens,
     (tokenAddress, priceData) => {
-      console.log(`${tokenAddress}: $${priceData.price}`);
+      // Handle price updates
     }
   );
 
@@ -52,8 +50,7 @@ export async function subscribeSingleTokenExample() {
   const unsubscribe = await unifiedPriceManager.subscribeToPrice(
     tokenAddress,
     (priceData) => {
-      console.log(`SOL 가격: $${priceData.price}`);
-      console.log(`24h 변동: ${priceData.priceChangePercent.toFixed(2)}%`);
+      // Handle price updates
     }
   );
 
@@ -68,11 +65,9 @@ export function getCachedPricesExample() {
   const solPrice = unifiedPriceManager.getCachedPrice(
     'So11111111111111111111111111111111111111112'
   );
-  console.log('SOL 캐시 가격:', solPrice?.price);
 
   // 모든 캐시된 가격
   const allPrices = unifiedPriceManager.getAllCachedPrices();
-  console.log(`${allPrices.size}개 토큰 캐시됨`);
 }
 
 // =======================================
@@ -80,7 +75,6 @@ export function getCachedPricesExample() {
 // =======================================
 export function getSubscribedTokensExample() {
   const subscribedTokens = unifiedPriceManager.getSubscribedTokens();
-  console.log('구독 중인 토큰:', subscribedTokens.length);
 }
 
 // =======================================
@@ -134,7 +128,7 @@ export async function subscribeWithChartExample() {
   const unsubscribePrice = await unifiedPriceManager.subscribeToPrice(
     tokenAddress,
     (priceData) => {
-      console.log('실시간 가격:', priceData.price);
+      // Handle real-time price updates
     }
   );
 
@@ -142,10 +136,8 @@ export async function subscribeWithChartExample() {
   const unsubscribeChart = await unifiedPriceManager.subscribeToChart(
     tokenAddress,
     (chartData) => {
-      console.log('차트 데이터:', chartData.length, '개 포인트');
-      // 최신 가격
+      // Handle chart data updates
       const latest = chartData[chartData.length - 1];
-      console.log('최신 봉:', latest.close);
     }
   );
 

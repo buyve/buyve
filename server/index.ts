@@ -32,9 +32,16 @@ const pubClient = createClient({
 const subClient = pubClient.duplicate();
 
 // Socket.IO 서버 설정 with Redis Adapter
+const allowedSocketOrigins = [
+  process.env.FRONTEND_URL,
+  'https://buyve.vercel.app',
+  process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
+  process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : null
+].filter(Boolean) as string[];
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: allowedSocketOrigins,
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -49,25 +56,41 @@ const io = new Server(server, {
 // Redis Adapter 적용
 async function setupRedisAdapter() {
   if (!REDIS_URL) {
-    console.log('Running without Redis adapter - single instance mode');
     return;
   }
-  
+
   try {
     await pubClient.connect();
     await subClient.connect();
-    
+
     io.adapter(createAdapter(pubClient, subClient));
-    console.log('Redis adapter connected successfully');
   } catch (error) {
     console.error('Failed to connect to Redis:', error);
-    console.log('Continuing without Redis adapter - single instance mode');
   }
 }
 
-// 미들웨어 설정
+// 미들웨어 설정 - CORS 보안 강화
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://buyve.vercel.app',
+  process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
+  process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : null
+].filter(Boolean) as string[];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: (origin, callback) => {
+    // origin이 없는 경우 (Postman, curl 등) 허용 (선택적)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());

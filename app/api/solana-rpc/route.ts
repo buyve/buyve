@@ -170,7 +170,6 @@ async function makePooledRpcRequest(body: unknown): Promise<unknown> {
         (now - blockhashCache.cachedAt) < BLOCKHASH_CACHE_DURATION &&
         !isBlacklisted(blockhashCache.endpoint)) {
       poolRequestCount++;
-      console.log(`[Pool] ✅ Blockhash cache hit (${poolRequestCount} total pool requests)`);
       return {
         jsonrpc: '2.0',
         id: requestBody.id,
@@ -245,11 +244,8 @@ async function makePooledRpcRequest(body: unknown): Promise<unknown> {
 
       // 기타 메서드는 fetch로 폴백
       default:
-        console.log(`[Pool] Method ${method} not mapped, falling back to fetch`);
         return makeRpcRequest(body, 0);
     }
-
-    console.log(`[Pool] ✅ Request via pool: ${method} (${poolRequestCount} total)`);
 
     return {
       jsonrpc: '2.0',

@@ -176,9 +176,6 @@ class UnifiedPriceManager {
       this.priceSubscribers.set(tokenAddress, new Set());
       // 첫 구독자만 채널 생성 (이후 구독자는 기존 채널 재사용)
       await this.setupPriceChannel(tokenAddress);
-      console.log(`✅ [Singleton] First subscriber for ${tokenAddress} - Channel created`);
-    } else {
-      console.log(`♻️ [Singleton] Reusing existing channel for ${tokenAddress} (${this.priceSubscribers.get(tokenAddress)!.size} subscribers)`);
     }
 
     // 구독자 추가
@@ -202,19 +199,14 @@ class UnifiedPriceManager {
       const subscribers = this.priceSubscribers.get(tokenAddress);
       if (subscribers) {
         subscribers.delete(callback);
-        console.log(`🔕 [Unsubscribe] ${tokenAddress}: ${subscribers.size} subscribers remaining`);
 
         // 🎯 마지막 구독자가 떠날 때만 채널 정리 (30초 딜레이로 재구독 대비)
         if (subscribers.size === 0) {
-          console.log(`⏳ [Cleanup Scheduled] ${tokenAddress} - Will cleanup in 30s if no new subscribers`);
           setTimeout(() => {
             // 30초 후에도 여전히 구독자가 없으면 정리
             const currentSubscribers = this.priceSubscribers.get(tokenAddress);
             if (currentSubscribers && currentSubscribers.size === 0) {
-              console.log(`🧹 [Cleanup] ${tokenAddress} - No subscribers, cleaning up channel`);
               this.cleanupPriceChannel(tokenAddress);
-            } else {
-              console.log(`↩️ [Cleanup Cancelled] ${tokenAddress} - New subscribers joined`);
             }
           }, 30000);
         }
@@ -253,11 +245,8 @@ class UnifiedPriceManager {
   private async setupPriceChannel(tokenAddress: string) {
     // 🎯 중복 방지: 이미 채널이 있으면 생성하지 않음
     if (this.channels.has(tokenAddress)) {
-      console.log(`♻️ [Channel Reuse] ${tokenAddress} - Channel already exists`);
       return;
     }
-
-    console.log(`🔔 [Channel Create] Setting up Realtime channel for ${tokenAddress}`);
 
     const channel = supabase
       .channel(`unified_price:${tokenAddress}`)
@@ -270,32 +259,25 @@ class UnifiedPriceManager {
           filter: `token_address=eq.${tokenAddress}`
         },
         (payload: any) => {
-          console.log(`🔥 DB Update detected for ${tokenAddress}:`, payload.eventType);
           // Supabase INSERT/UPDATE 이벤트가 발생하면 차트와 가격 업데이트
           this.handleDatabaseUpdate(tokenAddress, payload.new);
         }
       )
-      .subscribe((status) => {
-        console.log(`✅ Channel subscription status for ${tokenAddress}:`, status);
-      });
+      .subscribe();
 
     this.channels.set(tokenAddress, channel);
-    console.log(`✅ [Channel Ready] ${tokenAddress} - Listening to DB events only`);
   }
 
   // 데이터베이스 업데이트 처리
   // 🎯 개선: Supabase INSERT 이벤트가 발생하면 DB 데이터로 직접 업데이트 (Jupiter 호출 제거)
   // 서버 cron이 이미 최신 가격을 DB에 저장했으므로 추가 API 호출 불필요
   private handleDatabaseUpdate(tokenAddress: string, data: Record<string, unknown>) {
-    console.log(`💾 handleDatabaseUpdate called for ${tokenAddress}:`, data);
-
     // 새로운 OHLCV 데이터가 추가되면 차트 업데이트
     this.appendToChart(tokenAddress, data);
 
     // 가격 데이터도 DB에서 직접 조회하여 업데이트 (Jupiter 호출 제거)
     this.fetchPriceFromDatabase(tokenAddress).then(priceData => {
       if (priceData) {
-        console.log(`✅ Price updated for ${tokenAddress}:`, priceData.price);
         this.priceCache.set(tokenAddress, priceData);
         this.notifyPriceSubscribers(tokenAddress, priceData);
       }
@@ -382,7 +364,6 @@ class UnifiedPriceManager {
   // 차트에 새 데이터 추가
   // 새 레코드가 들어오면 appendToChart로 최신 봉만 유지합니다.
   private appendToChart(tokenAddress: string, newData: Record<string, unknown>) {
-    console.log(`📊 appendToChart called for ${tokenAddress}`);
     const existing = this.chartCache.get(tokenAddress) || [];
     const newPoint = this.convertDatabaseToChart([newData])[0];
 
@@ -393,7 +374,6 @@ class UnifiedPriceManager {
       )
       .slice(-60);
 
-    console.log(`📈 Chart updated: ${existing.length} -> ${updated.length} points`);
     this.chartCache.set(tokenAddress, updated);
     this.notifyChartSubscribers(tokenAddress, updated);
   }
@@ -419,17 +399,13 @@ class UnifiedPriceManager {
     // 🎯 안전장치: 구독자가 있으면 정리하지 않음
     const subscribers = this.priceSubscribers.get(tokenAddress);
     if (subscribers && subscribers.size > 0) {
-      console.log(`⚠️ [Cleanup Aborted] ${tokenAddress} - Still has ${subscribers.size} subscribers`);
       return;
     }
-
-    console.log(`🧹 [Cleanup Start] ${tokenAddress}`);
 
     const channel = this.channels.get(tokenAddress);
     if (channel) {
       channel.unsubscribe();
       this.channels.delete(tokenAddress);
-      console.log(`  ✓ Channel unsubscribed`);
     }
 
     // 🎯 updateIntervals는 더 이상 사용하지 않지만 안전을 위해 체크
@@ -437,12 +413,10 @@ class UnifiedPriceManager {
     if (interval) {
       clearInterval(interval);
       this.updateIntervals.delete(tokenAddress);
-      console.log(`  ✓ Interval cleared (legacy)`);
     }
 
     this.priceSubscribers.delete(tokenAddress);
     this.priceCache.delete(tokenAddress);
-    console.log(`✅ [Cleanup Complete] ${tokenAddress} - All resources freed`);
   }
 
   // 🎯 DB에 등록된 모든 코인 가격을 일괄 구독
@@ -451,8 +425,6 @@ class UnifiedPriceManager {
       // 1. DB에 등록된 모든 토큰 주소 수집
       const chatRoomTokens = await chatRoomTokenCollector.getAllChatRoomTokens();
       const allTokens = [...DEFAULT_TOKENS, ...chatRoomTokens.filter(token => !DEFAULT_TOKENS.includes(token))];
-
-      console.log(`🔔 ${allTokens.length}개 토큰 일괄 구독 시작:`, allTokens.slice(0, 5), '...');
 
       // 2. 각 토큰에 대해 구독 설정
       const unsubscribeFunctions = await Promise.all(
@@ -463,7 +435,6 @@ class UnifiedPriceManager {
 
       // 3. 전체 구독 해제 함수 반환
       return () => {
-        console.log('🔕 모든 토큰 구독 해제');
         unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
       };
     } catch (error) {
@@ -478,8 +449,6 @@ class UnifiedPriceManager {
     callback: (tokenAddress: string, data: UnifiedPriceData) => void
   ) {
     try {
-      console.log(`🔔 ${tokenAddresses.length}개 토큰 구독 시작`);
-
       // 각 토큰에 대해 구독 설정
       const unsubscribeFunctions = await Promise.all(
         tokenAddresses.map(tokenAddress =>
@@ -489,7 +458,6 @@ class UnifiedPriceManager {
 
       // 전체 구독 해제 함수 반환
       return () => {
-        console.log('🔕 토큰 목록 구독 해제');
         unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
       };
     } catch (error) {
