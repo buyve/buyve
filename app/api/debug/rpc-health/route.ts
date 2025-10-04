@@ -62,8 +62,6 @@ async function testRpcEndpoint(endpoint: { name: string; url: string }) {
 
 export async function GET() {
   try {
-    console.log('[RPC Health] Starting health check for all endpoints...');
-    
     // Test all endpoints in parallel
     const results = await Promise.all(
       RPC_ENDPOINTS.map(endpoint => testRpcEndpoint(endpoint))
@@ -79,9 +77,7 @@ export async function GET() {
       proxy: proxyResult,
       recommendation: getRecommendation(results, proxyResult)
     };
-    
-    console.log('[RPC Health] Health check complete:', summary);
-    
+
     return NextResponse.json(summary);
   } catch (error: any) {
     console.error('[RPC Health] Health check error:', error);

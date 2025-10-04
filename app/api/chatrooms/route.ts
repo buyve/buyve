@@ -120,31 +120,20 @@ export async function POST(request: NextRequest) {
     let tokenImageUrl: string | null = null;
     let tokenName = name; // 기본값으로 사용자 입력 이름 사용
 
-    console.log(`\n🔍 [Chatroom Creation] Fetching metadata for token: ${contractAddress.trim()}`);
-
     try {
       // 1. 메타데이터 조회 시도 (재시도 3회)
       const metadata = await fetchTokenMetadataWithRetry(contractAddress.trim(), 3);
 
       if (metadata) {
-        console.log(`✅ [Metadata] Successfully fetched:`, {
-          name: metadata.name,
-          symbol: metadata.symbol,
-          image: metadata.image
-        });
-
         tokenImageUrl = metadata.image || null;
         // 메타데이터에서 이름이 있고 유의미하다면 사용
         if (metadata.name && metadata.name.trim() && metadata.name.trim() !== 'Unknown') {
           tokenName = metadata.name.trim();
         }
-      } else {
-        console.log(`⚠️ [Metadata] No metadata found from fetchTokenMetadataWithRetry`);
       }
 
       // 2. 메타데이터에서 이미지를 못 가져왔다면 Jupiter API 시도
       if (!tokenImageUrl) {
-        console.log(`🔄 [Jupiter] Trying Jupiter token list...`);
         try {
           const jupiterResponse = await fetch(
             'https://cdn.jsdelivr.net/gh/solana-labs/token-list@main/src/tokens/solana.tokenlist.json'
@@ -153,14 +142,11 @@ export async function POST(request: NextRequest) {
             const jupiterData = await jupiterResponse.json();
             const token = jupiterData.tokens.find((t: any) => t.address === contractAddress.trim());
             if (token?.logoURI) {
-              console.log(`✅ [Jupiter] Found token image: ${token.logoURI}`);
               tokenImageUrl = token.logoURI;
               // Jupiter에서 토큰 이름도 가져오기
               if (!metadata && token.name) {
                 tokenName = token.name;
               }
-            } else {
-              console.log(`⚠️ [Jupiter] Token not found in Jupiter list`);
             }
           }
         } catch (jupiterError) {
@@ -172,21 +158,16 @@ export async function POST(request: NextRequest) {
       if (!tokenImageUrl) {
         // Jupiter static CDN 이미지
         tokenImageUrl = `https://static.jup.ag/images/${contractAddress.trim()}.png`;
-        console.log(`🎯 [Fallback] Using static CDN image: ${tokenImageUrl}`);
       }
-
-      console.log(`\n📝 [Final Result] Token Name: ${tokenName}, Image URL: ${tokenImageUrl}\n`);
 
       // 🔥 IMPORTANT: tokenImageUrl은 절대 null이 되면 안됨 (DB 기본값 방지)
       if (!tokenImageUrl || tokenImageUrl === '🎯') {
         tokenImageUrl = `https://static.jup.ag/images/${contractAddress.trim()}.png`;
-        console.log(`⚠️ [Safety Check] Ensuring valid image URL: ${tokenImageUrl}`);
       }
     } catch (error) {
       console.error('❌ [Error] Failed to fetch token metadata/image:', error);
       // 완전 실패 시에도 정적 이미지 소스 사용
       tokenImageUrl = `https://static.jup.ag/images/${contractAddress.trim()}.png`;
-      console.log(`🎯 [Fallback] Using static CDN image: ${tokenImageUrl}`);
     }
 
     // 트랜잭션 검증 (개발 환경에서는 일시적으로 비활성화)

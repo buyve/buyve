@@ -124,7 +124,6 @@ export function useSwap() {
 
       const rawAmount = Math.floor(amount * Math.pow(10, fromTokenInfo.decimals));
 
-
       const quote = await jupiterService.getQuote({
         inputMint: fromTokenInfo.address,
         outputMint: toTokenInfo.address,
@@ -134,11 +133,6 @@ export function useSwap() {
       });
 
       updateState({ quote, loading: false });
-      
-      // 견적 정보 로깅
-      const inputAmount = formatTokenAmount(quote.inAmount, fromTokenInfo.decimals);
-      const outputAmount = formatTokenAmount(quote.outAmount, toTokenInfo.decimals);
-      
 
       return quote;
       
@@ -170,7 +164,6 @@ export function useSwap() {
     updateState({ loading: true, error: null, signature: null });
 
     try {
-
       // 수수료를 Jupiter 플랫폼 기능으로 처리하도록 요청
       const swapResponse = await jupiterService.getSwapTransaction(quote, {
         inputMint: quote.inputMint,
@@ -184,7 +177,6 @@ export function useSwap() {
         platformFeeBps: PLATFORM_FEE_BPS,
       });
 
-
       // 받은 swapTransaction 디코딩 (Transaction)
       const swapTxBuf = Buffer.from(swapResponse.swapTransaction, 'base64');
       const transaction = Transaction.from(swapTxBuf);
@@ -197,7 +189,6 @@ export function useSwap() {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey; // 혹시 없으면 명시적으로 지정
 
-
       // 5) 메모 인스트럭션 추가 (옵션)
       if (memo && memo.trim()) {
         // 🏷️ 앱 식별자를 포함한 메모 생성
@@ -206,11 +197,9 @@ export function useSwap() {
         transaction.add(memoInstruction);
       }
 
-
       try {
         // 6) 지갑 어댑터를 통한 서명
         const signedTransaction = await signTransaction(transaction);
-
 
         // 7) 서명된 트랜잭션 전송
         const txId = await connection.sendRawTransaction(signedTransaction.serialize(), {
@@ -233,11 +222,6 @@ export function useSwap() {
               useWebSocket: true
             });
             
-            // 확인 통계 로깅 (개발 환경에서만)
-            if (process.env.NODE_ENV === 'development') {
-              const stats = getConfirmationStats();
-              console.log('Transaction confirmation stats:', stats);
-            }
           } catch (error) {
             console.error('Hybrid confirmation error:', error);
             // 폴백: 기존 연결로 한 번 더 시도
@@ -264,23 +248,21 @@ export function useSwap() {
         // 🎯 메모가 있는 경우 트랜잭션 확정 후 메모 확인 및 채팅에 추가
         if (memo && memo.trim()) {
           try {
-            
             // 직접 연결로 메모 확인
-            const memoText = await extractMemoFromTransaction(directConnection, txId);
-            
+            const memoText = await extractMemoFromTransaction(connection, txId);
+
             if (memoText && memoText.includes('[SwapChat]')) {
               const cleanMemo = memoText.replace('[SwapChat]', '').trim();
-              
+
               // 트랜잭션 정보 가져오기 (직접 연결 사용)
-              const txInfo = await directConnection.getTransaction(txId, {
+              const txInfo = await connection.getTransaction(txId, {
                 commitment: 'confirmed',
                 maxSupportedTransactionVersion: 0,
               });
-              
+
               if (txInfo) {
                 const senderAddress = txInfo.transaction.message.staticAccountKeys[0]?.toString() || 'Unknown';
-                
-                
+
                 // 전역 메시지에 추가 (useChatMessages의 글로벌 저장소에 직접 추가)
                 try {
                   const { addMessage } = await import('./useChatMessages');
@@ -292,18 +274,12 @@ export function useSwap() {
                     tradeAmount: '',
                     content: `✅ ${cleanMemo}`,
                   });
-                  
                 } catch (addError) {
                   // Ignore chat message add errors
                 }
-              } else {
-                // Transaction info not available
               }
-            } else {
-              // Memo not found or invalid format
             }
           } catch (memoError) {
-            
             // 메모 확인 실패해도 기본 메시지 추가 시도
             try {
               const { addMessage } = await import('./useChatMessages');
@@ -320,7 +296,6 @@ export function useSwap() {
             }
           }
         }
-
 
         // 트랜잭션 상태 업데이트
         updateState({ signature: txId, loading: false });

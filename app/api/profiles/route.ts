@@ -21,11 +21,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const wallet_address = searchParams.get('wallet_address');
 
-    console.log(`[PROFILES API] GET request received`);
-    console.log(`[PROFILES API] URL: ${request.url}`);
-    console.log(`[PROFILES API] User-Agent: ${request.headers.get('User-Agent')}`);
-    console.log(`[PROFILES API] Extracted wallet_address: ${wallet_address}`);
-
     if (!wallet_address) {
       return NextResponse.json(
         { error: 'Wallet address is required' },
@@ -44,14 +39,11 @@ export async function GET(request: NextRequest) {
     }
 
     // 사용자 프로필 조회
-    console.log(`[PROFILES API] Querying profile for wallet: ${wallet_address}`);
     const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .eq('wallet_address', wallet_address)
       .single();
-    
-    console.log(`[PROFILES API] Query result:`, { profile, error });
 
     if (error) {
       // 프로필이 없는 경우는 에러가 아니라 빈 결과로 처리

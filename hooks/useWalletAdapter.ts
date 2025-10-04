@@ -141,23 +141,19 @@ export function useWalletAdapter() {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[WalletAdapter] Fetching balance (attempt ${attempt}/${maxRetries})`);
         const connection = await getStableConnection();
-        console.log(`[WalletAdapter] Using RPC endpoint: ${connection.rpcEndpoint}`);
-        
+
         const lamports = await connection.getBalance(publicKey);
         const solBalance = lamports / LAMPORTS_PER_SOL;
         setBalance(solBalance);
-        console.log(`[WalletAdapter] Balance fetched successfully: ${solBalance} SOL`);
         setIsLoadingBalance(false);
         return;
       } catch (error) {
         lastError = error;
         console.error(`[WalletAdapter] Balance fetch attempt ${attempt} failed:`, error);
-        
+
         if (attempt < maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-          console.log(`[WalletAdapter] Retrying in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }

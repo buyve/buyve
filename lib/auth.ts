@@ -44,27 +44,18 @@ export function verifyWalletSignature(
   publicKey: string
 ): boolean {
   try {
-    console.log('[AUTH DEBUG] Starting signature verification')
-    console.log('[AUTH DEBUG] Message:', message)
-    console.log('[AUTH DEBUG] Signature:', signature)
-    console.log('[AUTH DEBUG] PublicKey:', publicKey)
-    
     // 메시지를 Uint8Array로 변환
     const messageBytes = new TextEncoder().encode(message)
-    console.log('[AUTH DEBUG] Message bytes length:', messageBytes.length)
-    
+
     // 서명을 Uint8Array로 변환 (Base58 디코딩)
     const signatureBytes = bs58.decode(signature)
-    console.log('[AUTH DEBUG] Signature bytes length:', signatureBytes.length)
-    
+
     // 공개키를 Uint8Array로 변환
     const publicKeyBytes = new PublicKey(publicKey).toBytes()
-    console.log('[AUTH DEBUG] PublicKey bytes length:', publicKeyBytes.length)
-    
+
     // 서명 검증
     const isValid = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes)
-    console.log('[AUTH DEBUG] Signature verification result:', isValid)
-    
+
     return isValid
   } catch (error) {
     console.error('[AUTH DEBUG] Signature verification error:', error)
@@ -112,8 +103,7 @@ export async function createOrUpdateProfile(walletAddress: string, nickname?: st
       console.error('[AUTH] Profile upsert error:', error);
       throw new Error('Profile creation failed');
     }
-    
-    console.log('[AUTH] Profile created/updated:', data);
+
     return data
   } catch (error) {
     console.error('[AUTH] createOrUpdateProfile error:', error);

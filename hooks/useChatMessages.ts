@@ -97,7 +97,6 @@ async function fetchMessagesFromSupabase(roomId: string): Promise<ChatMessage[]>
       return [];
     }
 
-    console.log(`[useChatMessages] Loading messages for token: ${tokenAddress}`);
     
     // Supabase 클라이언트 확인
     if (!supabase) {
@@ -118,11 +117,8 @@ async function fetchMessagesFromSupabase(roomId: string): Promise<ChatMessage[]>
     }
 
     if (!data || data.length === 0) {
-      console.log('[useChatMessages] No messages found in database');
       return [];
     }
-
-    console.log(`[useChatMessages] Loaded ${data.length} messages from Supabase`);
     // Supabase에서 메시지 로드됨
     return data.map(msg => formatMessageFromSupabase(msg, roomId));
   } catch (error) {

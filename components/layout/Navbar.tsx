@@ -231,24 +231,16 @@ function ChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
 
 // Wallet profile component
 function WalletProfile(): React.ReactElement {
-  const { 
-    isConnected, 
-    address, 
-    nickname, 
-    avatar, 
-    profile,
-    disconnectWallet, 
-    updateProfile,
-    connectWallet
-  } = useWallet();
-  
-  console.log('[WALLET PROFILE] Component values:', {
+  const {
     isConnected,
     address,
     nickname,
     avatar,
-    profile
-  });
+    profile,
+    disconnectWallet,
+    updateProfile,
+    connectWallet
+  } = useWallet();
   
   const DEFAULT_AVATARS = ['👤', '🧑', '👩', '🤵', '👩‍💼', '🧑‍💼', '👨‍💼', '🧙‍♂️', '🧙‍♀️', '🥷'];
   const [isDialogOpen, setIsDialogOpen] = useState(false);

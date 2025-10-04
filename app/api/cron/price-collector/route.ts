@@ -47,8 +47,6 @@ export async function GET(request: NextRequest) {
       };
     } else {
       // 배치 실패 시 개별 호출로 내려감
-      console.log('Batch update failed, falling back to individual updates');
-
       defaultResults = await Promise.allSettled(
         DEFAULT_TOKENS.map(async (tokenAddress) => {
           try {

@@ -20,13 +20,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[WALLET API] Received data:', { walletAddress, message, signature: signature.substring(0, 20) + '...' })
-    
     // 지갑 서명 검증
     const isValidSignature = verifyWalletSignature(message, signature, walletAddress)
-    
-    console.log('[WALLET API] Signature validation result:', isValidSignature)
-    
+
     if (!isValidSignature) {
       console.error('[WALLET API] Signature validation failed')
       return NextResponse.json(
