@@ -20,39 +20,39 @@ export default function SolanaStatus({ showDetails = false, className = '' }: So
   };
 
   const getStatusText = () => {
-    if (status.loading) return '연결 중...';
-    if (status.connected) return '연결됨';
-    return '연결 끊김';
+    if (status.loading) return 'Connecting...';
+    if (status.connected) return 'Connected';
+    return 'Disconnected';
   };
 
   return (
     <div className={`relative ${className}`}>
-      {/* 상태 표시 버튼 */}
+      {/* Status display button */}
       <button
         onClick={() => setShowDropdown(!showDropdown)}
         className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         title={status.error || `Solana ${status.network} - ${getStatusText()}`}
       >
-        {/* 상태 표시 점 */}
+        {/* Status indicator */}
         <div className={`w-2 h-2 rounded-full ${getStatusColor()}`}>
           {status.loading && (
             <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>
           )}
         </div>
-        
-        {/* 네트워크 이름 */}
+
+        {/* Network name */}
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {status.network || 'Solana'}
         </span>
-        
-        {/* 블록 높이 (간단 표시) */}
+
+        {/* Block height (simple display) */}
         {status.connected && status.blockHeight && !showDetails && (
           <span className="text-xs text-gray-500 dark:text-gray-400">
             #{status.blockHeight.toLocaleString()}
           </span>
         )}
 
-        {/* 드롭다운 화살표 */}
+        {/* Dropdown arrow */}
         <svg
           className={`w-4 h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
           fill="none"
@@ -63,22 +63,22 @@ export default function SolanaStatus({ showDetails = false, className = '' }: So
         </svg>
       </button>
 
-      {/* 드롭다운 메뉴 */}
+      {/* Dropdown menu */}
       {showDropdown && (
         <div className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
           <div className="p-4">
-            {/* 헤더 */}
+            {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Solana 네트워크
+                Solana Network
               </h3>
               <div className="flex items-center space-x-2">
-                {/* 수동 새로고침 버튼 */}
+                {/* Manual refresh button */}
                 <button
                   onClick={refresh}
                   disabled={status.loading}
                   className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-                  title="연결 상태 새로고침"
+                  title="Refresh connection status"
                 >
                   <svg 
                     className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${status.loading ? 'animate-spin' : ''}`}
@@ -93,10 +93,10 @@ export default function SolanaStatus({ showDetails = false, className = '' }: So
               </div>
             </div>
 
-            {/* 연결 상태 정보 */}
+            {/* Connection status info */}
             <div className="space-y-2 mb-4">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">상태:</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Status:</span>
                 <span className={`text-sm font-medium ${
                   status.connected ? 'text-green-600' : 'text-red-600'
                 }`}>

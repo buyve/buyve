@@ -1,11 +1,11 @@
 import { supabase } from './supabase';
 import { tokenPriceService } from './tokenPriceService';
 
-// 🏠 채팅방 토큰 수집 서비스
+// Chat room token collection service
 export class ChatRoomTokenCollector {
-  
+
   /**
-   * 모든 채팅방에서 토큰 주소를 수집합니다
+   * Collect token addresses from all chat rooms
    */
   async getAllChatRoomTokens(): Promise<string[]> {
     try {
@@ -34,7 +34,7 @@ export class ChatRoomTokenCollector {
   }
 
   /**
-   * 특정 채팅방의 토큰 주소를 가져옵니다
+   * Get token address for a specific chat room
    */
   async getChatRoomToken(roomId: string): Promise<string | null> {
     try {
@@ -55,7 +55,7 @@ export class ChatRoomTokenCollector {
   }
 
   /**
-   * 채팅방 토큰들의 가격 데이터를 일괄 수집합니다
+   * Collect price data for chat room tokens in batch
    */
      async collectAllChatRoomTokenPrices(): Promise<{
      success: boolean;
@@ -82,7 +82,7 @@ export class ChatRoomTokenCollector {
         };
       }
 
-      // 각 토큰의 가격 업데이트 실행
+      // Execute price updates for each token
       const updatePromises = tokenAddresses.map(async (tokenAddress) => {
         try {
           const success = await tokenPriceService.updateTokenPrice(tokenAddress);
@@ -129,7 +129,7 @@ export class ChatRoomTokenCollector {
   }
 
   /**
-   * 새로운 채팅방이 생성될 때 토큰 주소를 등록하고 즉시 가격 수집을 시작합니다
+   * Register token address and start price collection when a new chat room is created
    */
   async onNewChatRoomCreated(roomId: string, tokenAddress?: string): Promise<boolean> {
     try {
@@ -137,8 +137,8 @@ export class ChatRoomTokenCollector {
         return true;
       }
 
-      
-      // 즉시 가격 수집 시작
+
+      // Start price collection immediately
       const success = await tokenPriceService.updateTokenPrice(tokenAddress);
       
       if (success) {
@@ -152,7 +152,7 @@ export class ChatRoomTokenCollector {
   }
 
   /**
-   * 활성 채팅방들의 토큰만 수집합니다
+   * Collect tokens only from active chat rooms
    */
   async collectActiveChatRoomTokens(): Promise<string[]> {
     try {
@@ -178,7 +178,7 @@ export class ChatRoomTokenCollector {
   }
 }
 
-// 싱글톤 인스턴스
+// Singleton instance
 export const chatRoomTokenCollector = new ChatRoomTokenCollector();
 
 export default chatRoomTokenCollector; 

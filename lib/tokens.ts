@@ -1,6 +1,6 @@
 import { PublicKey } from '@solana/web3.js';
 
-// 🪙 토큰 정보 타입 정의
+// Token information type definition
 export interface TokenInfo {
   symbol: string;
   name: string;
@@ -10,7 +10,7 @@ export interface TokenInfo {
   coingeckoId?: string;
 }
 
-// 🌟 주요 토큰들
+// Main tokens
 export const TOKENS = {
   SOL: {
     symbol: 'SOL',
@@ -30,29 +30,29 @@ export const TOKENS = {
   },
 } as const;
 
-// 🔄 스왑 관련 상수
+// Swap-related constants
 export const SWAP_CONFIG = {
-  // Jupiter Aggregator API (2025 엔드포인트 업데이트)
+  // Jupiter Aggregator API (2025 endpoint update)
   JUPITER_API_URL: 'https://lite-api.jup.ag/swap/v1',
-  
-  // 기본 슬리피지 (0.5%)
+
+  // Default slippage (0.5%)
   DEFAULT_SLIPPAGE_BPS: 50,
-  
-  // 최대 슬리피지 (5%)
+
+  // Maximum slippage (5%)
   MAX_SLIPPAGE_BPS: 500,
-  
-  // 기본 우선순위 수수료 (마이크로 램포트)
+
+  // Default priority fee (micro lamports)
   DEFAULT_PRIORITY_FEE: 1000,
 } as const;
 
-// 🏷️ 토큰 PublicKey 객체들
+// Token PublicKey objects
 export const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 
 export const SOL_MINT = new PublicKey(TOKENS.SOL.address);
 export const USDC_MINT = new PublicKey(TOKENS.USDC.address);
 
-// 💰 금액 포맷팅 유틸리티
+// Amount formatting utility
 export function formatTokenAmount(amount: number | string, decimals: number): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   const divisor = Math.pow(10, decimals);
@@ -62,14 +62,14 @@ export function formatTokenAmount(amount: number | string, decimals: number): st
   });
 }
 
-// 🔢 토큰 원시 금액으로 변환
+// Convert to token raw amount
 export function parseTokenAmount(amount: number | string, decimals: number): bigint {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   const multiplier = Math.pow(10, decimals);
   return BigInt(Math.floor(num * multiplier));
 }
 
-// 🏪 토큰 주소로 토큰 정보 찾기
+// Find token info by token address
 export function getTokenByAddress(address: string): TokenInfo | undefined {
   return Object.values(TOKENS).find(token => token.address === address);
 }

@@ -54,7 +54,7 @@ function AvatarFallback({
 
 export { Avatar, AvatarImage, AvatarFallback }
 
-// 최적화된 Avatar 컴포넌트 추가
+// Optimized Avatar component
 interface OptimizedAvatarProps {
   src?: string | null;
   fallback: string;
@@ -63,23 +63,23 @@ interface OptimizedAvatarProps {
   priority?: boolean;
 }
 
-export function OptimizedAvatar({ 
-  src, 
-  fallback, 
+export function OptimizedAvatar({
+  src,
+  fallback,
   alt = 'Avatar',
   className = '',
-  priority = false 
+  priority = false
 }: OptimizedAvatarProps) {
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [hasError, setHasError] = React.useState(false);
 
   React.useEffect(() => {
     if (src && src.startsWith('http')) {
-      // 이미지가 이미 캐시되어 있는지 확인
+      // Check if image is already cached
       if (ImageCacheManager.isLoaded(src)) {
         setIsLoaded(true);
       } else if (priority) {
-        // 우선순위가 높은 이미지는 즉시 프리로드
+        // Preload high-priority images immediately
         ImageCacheManager.preload(src).then(() => {
           setIsLoaded(true);
         });
@@ -98,7 +98,7 @@ export function OptimizedAvatar({
     setHasError(true);
   };
 
-  // URL이 아닌 경우 (이모지 등)
+  // If not a URL (emoji, etc.)
   if (!src || !src.startsWith('http')) {
     return (
       <Avatar className={className}>

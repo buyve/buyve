@@ -56,25 +56,21 @@ function ChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
   const loadChatrooms = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 채팅방 목록 로드 시작
       const response = await fetch('/api/chatrooms');
       const data = await response.json();
-      
+
       if (data.success) {
-        // 채팅방 목록 로드 성공
         // Convert API data to UI format
         const formattedRooms = data.chatrooms.map((room: ApiChatRoom) => ({
           id: room.contractAddress,
           name: room.name,
-                      image: room.image || '🪙', // Token image URL or default emoji
+          image: room.image || '🪙', // Token image URL or default emoji
           description: `CA: ${room.contractAddress.slice(0, 8)}...`
         }));
         setApiRooms(formattedRooms);
-                  // 포맷된 채팅방 목록
       }
-        } catch {
-      // 채팅방 로드 오류
-              // Keep mock data on error
+    } catch {
+      // Keep mock data on error
       setApiRooms(mockRooms);
     } finally {
       setIsLoading(false);
@@ -110,11 +106,10 @@ function ChatRoomSearch({ onRoomSelect, onCreateRoom }: ChatRoomSearchProps) {
       .slice(0, 5);
   }, [searchQuery, allRooms]);
 
-      // Chatroom selection handler
+  // Chatroom selection handler
   const handleRoomSelect = useCallback((room: typeof mockRooms[0]) => {
     setShowResults(false); // Hide results list
     onRoomSelect?.(room.id);
-    // 채팅방 선택됨
   }, [onRoomSelect]);
 
   // Create room handler
@@ -268,9 +263,7 @@ function WalletProfile(): React.ReactElement {
         avatar: tempAvatar
       });
       setIsDialogOpen(false);
-              // 프로필 저장 완료
-          } catch {
-        // 프로필 저장 오류
+    } catch {
       alert('An error occurred while saving profile.');
     } finally {
       setIsSaving(false);
@@ -297,20 +290,16 @@ function WalletProfile(): React.ReactElement {
 
       if (result.success) {
         setTempAvatar(result.avatar_url);
-        // 이미지 업로드 완료
-        
+
         // Update profile immediately after upload
         await updateProfile({
           nickname: tempNickname,
           avatar: result.avatar_url
         });
-                  // 프로필 자동 업데이트 완료
-              } else {
-          // 이미지 업로드 실패
+      } else {
         alert('Image upload failed: ' + result.error);
       }
-          } catch {
-        // 이미지 업로드 오류
+    } catch {
       alert('An error occurred during image upload.');
     } finally {
       setIsUploading(false);
@@ -574,11 +563,10 @@ export default function Navbar() {
 
   const handleRoomSelect = useCallback((roomId: string) => {
     // Chatroom selection handler
-    // 네비게이션에서 채팅방 선택됨
-    
+
     // Send message to ChatArea to change to selected room
-    window.dispatchEvent(new CustomEvent('roomSelected', { 
-      detail: { roomId } 
+    window.dispatchEvent(new CustomEvent('roomSelected', {
+      detail: { roomId }
     }));
   }, []);
 

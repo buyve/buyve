@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit } from './rateLimiter';
 
-// 🎯 Rate Limiting 설정 (분당 200회로 여유롭게)
+// Rate limiting configuration (generous 200 requests per minute)
 export const RATE_LIMIT_CONFIG = {
-  windowMs: 60 * 1000, // 1분 윈도우
+  windowMs: 60 * 1000, // 1 minute window
   maxRequests: {
-    general: 200,      // 일반 API: 분당 200개
-    priceUpdate: 200,  // 가격 업데이트: 분당 200개
-    websocket: 200,    // WebSocket: 분당 200개
-    auth: 200          // 인증: 분당 200개
+    general: 200,      // General API: 200 per minute
+    priceUpdate: 200,  // Price updates: 200 per minute
+    websocket: 200,    // WebSocket: 200 per minute
+    auth: 200          // Authentication: 200 per minute
   }
 };
 
 export type RateLimitCategory = keyof typeof RATE_LIMIT_CONFIG.maxRequests;
 
 /**
- * IP 주소 추출
+ * Extract client IP address
  */
 export function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -24,7 +24,7 @@ export function getClientIP(request: NextRequest): string {
 }
 
 /**
- * 엔드포인트 카테고리 결정
+ * Determine endpoint category
  */
 export function getEndpointCategory(pathname: string): RateLimitCategory {
   if (pathname.includes('/api/price-updater') || pathname.includes('/api/chatroom-tokens')) {
@@ -43,14 +43,14 @@ export function getEndpointCategory(pathname: string): RateLimitCategory {
 }
 
 /**
- * API Route에서 사용할 Rate Limit 미들웨어
+ * Rate limit middleware for API routes
  *
  * @example
  * export async function GET(request: NextRequest) {
  *   const rateLimitResult = await applyRateLimit(request);
  *   if (rateLimitResult) return rateLimitResult;
  *
- *   // 정상 처리
+ *   // Normal processing
  *   return NextResponse.json({ data: '...' });
  * }
  */
@@ -67,12 +67,12 @@ export async function applyRateLimit(
     const rateLimitKey = `ratelimit:${ip}:${endpoint}`;
     const result = await checkRateLimit(rateLimitKey, limit, windowMs);
 
-    // Rate Limit 초과 시 429 응답
+    // Return 429 response when rate limit exceeded
     if (!result.allowed) {
       const response = NextResponse.json(
         {
           error: 'Too Many Requests',
-          message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+          message: 'Too many requests. Please try again later.',
           retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000)
         },
         { status: 429 }
@@ -86,17 +86,17 @@ export async function applyRateLimit(
       return response;
     }
 
-    // 통과 시 null 반환 (헤더는 응답에서 추가 가능하도록 result 반환 고려)
+    // Return null on pass (consider returning result to add headers in response)
     return null;
   } catch (error) {
     console.error('Rate limit check error:', error);
-    // 에러 시 요청 허용 (Fail-open)
+    // Allow request on error (fail-open)
     return null;
   }
 }
 
 /**
- * Rate Limit 헤더를 응답에 추가하는 헬퍼
+ * Helper to add rate limit headers to response
  */
 export async function addRateLimitHeaders(
   response: NextResponse,

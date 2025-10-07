@@ -11,12 +11,12 @@ const DEFAULT_AVATARS = [
   '🦊', '🐸', '🐱', '🐶', '🦁', '🐯', '🐨', '🐼'
 ];
 
-// 🎯 메시지 캐시 최적화 설정
-const MAX_MESSAGES_PER_ROOM = 500; // 방당 최대 메시지 수
-const CACHE_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5분마다 정리
-const MESSAGE_RETENTION_TIME = 24 * 60 * 60 * 1000; // 24시간 보관
+// Message cache optimization settings
+const MAX_MESSAGES_PER_ROOM = 500; // Maximum messages per room
+const CACHE_CLEANUP_INTERVAL = 5 * 60 * 1000; // Clean up every 5 minutes
+const MESSAGE_RETENTION_TIME = 24 * 60 * 60 * 1000; // Keep for 24 hours
 
-// 🚀 토큰 주소 매핑 (기존 UI 호환성 + 동적 CA 지원)
+// Token address mapping (legacy UI compatibility + dynamic CA support)
 const ROOM_TOKEN_MAPPING: Record<string, string> = {
   'bonk': 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
   'wif': 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
@@ -26,49 +26,49 @@ const ROOM_TOKEN_MAPPING: Record<string, string> = {
   'meme': 'CYkD9AsNYPvWxmnRdQN6Qd2MkK5t8RivxvSaKnmGVfmH',
   'anon': 'AnonGEfxT5BcedgCnU7EGdJhqxkHWLKfwjBQEjhvJLM6',
   'sol-usdc': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC Trading Room
-  'btc-chat': 'So11111111111111111111111111111111111111112', // SOL Trading Room (임시)
-  'general': 'So11111111111111111111111111111111111111112', // SOL Trading Room (임시)
+  'btc-chat': 'So11111111111111111111111111111111111111112', // SOL Trading Room (temp)
+  'general': 'So11111111111111111111111111111111111111112', // SOL Trading Room (temp)
 };
 
-// 🚀 roomId에서 토큰 주소 추출 (CA 직접 지원)
+// Extract token address from roomId (direct CA support)
 const getTokenAddressFromRoomId = (roomId: string): string | null => {
-  // 정적 매핑 먼저 확인
+  // Check static mapping first
   if (ROOM_TOKEN_MAPPING[roomId]) {
     return ROOM_TOKEN_MAPPING[roomId];
   }
-  
-  // CA 형식인지 확인 (Solana CA는 44자 Base58)
+
+  // Check if CA format (Solana CA is 32-44 characters Base58)
   if (roomId && roomId.length >= 32 && roomId.length <= 44) {
     return roomId;
   }
-  
+
   return null;
 };
 
-// 실시간 메시지 상태 관리
+// Real-time message state management
 let globalMessages: ChatMessage[] = [];
 const messageListeners = new Set<() => void>();
 let realtimeChannel: RealtimeChannel | null = null;
 
-// 리스너 알림 함수
+// Notify listeners function
 const notifyListeners = () => {
   messageListeners.forEach(listener => listener());
 };
 
-// Supabase 메시지를 ChatMessage로 변환 (프로필 정보 없이)
+// Convert Supabase message to ChatMessage (without profile info)
 function formatMessageFromSupabase(dbMessage: MessageCache, roomId: string): ChatMessage {
   const randomAvatar = DEFAULT_AVATARS[Math.floor(Math.random() * DEFAULT_AVATARS.length)];
-  
-  // SOL 거래량 처리 - quantity가 lamports 단위인 경우 SOL로 변환
+
+  // Handle SOL trading volume - convert from lamports to SOL if needed
   let formattedAmount: string | undefined;
   if (dbMessage.quantity && dbMessage.quantity > 0) {
-    // quantity가 1보다 큰 경우 lamports로 간주하고 SOL로 변환
+    // If quantity > 1, treat as lamports and convert to SOL
     if (dbMessage.quantity >= 1000000000) { // 1 SOL = 1,000,000,000 lamports
       formattedAmount = (dbMessage.quantity / 1000000000).toFixed(3);
     } else if (dbMessage.quantity >= 1000000) { // 0.001 SOL = 1,000,000 lamports
       formattedAmount = (dbMessage.quantity / 1000000000).toFixed(6);
     } else {
-      // 이미 SOL 단위인 경우
+      // Already in SOL units
       formattedAmount = dbMessage.quantity.toString();
     }
   }
@@ -88,7 +88,7 @@ function formatMessageFromSupabase(dbMessage: MessageCache, roomId: string): Cha
   };
 }
 
-// Supabase에서 메시지 가져오기 (프로필은 ChatBubble에서 개별 조회)
+// Fetch messages from Supabase (profiles fetched individually in ChatBubble)
 async function fetchMessagesFromSupabase(roomId: string): Promise<ChatMessage[]> {
   try {
     const tokenAddress = getTokenAddressFromRoomId(roomId);
@@ -97,8 +97,8 @@ async function fetchMessagesFromSupabase(roomId: string): Promise<ChatMessage[]>
       return [];
     }
 
-    
-    // Supabase 클라이언트 확인
+
+    // Check Supabase client
     if (!supabase) {
       console.error('[useChatMessages] Supabase client not initialized');
       return [];
@@ -119,7 +119,7 @@ async function fetchMessagesFromSupabase(roomId: string): Promise<ChatMessage[]>
     if (!data || data.length === 0) {
       return [];
     }
-    // Supabase에서 메시지 로드됨
+    // Messages loaded from Supabase
     return data.map(msg => formatMessageFromSupabase(msg, roomId));
   } catch (error) {
     console.error('[useChatMessages] Unexpected error loading messages:', error);
@@ -127,7 +127,7 @@ async function fetchMessagesFromSupabase(roomId: string): Promise<ChatMessage[]>
   }
 }
 
-// Supabase에 메시지 저장
+// Save message to Supabase
 const saveMessageToSupabase = async (roomId: string, messageData: {
   content: string;
   trade_type: 'buy' | 'sell';
@@ -138,7 +138,7 @@ const saveMessageToSupabase = async (roomId: string, messageData: {
   avatar?: string;
 }): Promise<ChatMessage | null> => {
   try {
-    // API 엔드포인트를 통해 메시지 저장
+    // Save message through API endpoint
     const response = await fetch('/api/messages', {
       method: 'POST',
       headers: {
@@ -152,20 +152,20 @@ const saveMessageToSupabase = async (roomId: string, messageData: {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(`메시지 저장 실패: ${errorData.error}`);
+      throw new Error(`Failed to save message: ${errorData.error}`);
     }
 
     const { data } = await response.json();
-    
-    // Realtime 구독이 처리하므로 여기서는 메시지를 반환만 함
+
+    // Only return message here as Realtime subscription handles updates
     const newMessage = formatMessageFromSupabase(data, roomId);
     return newMessage;
   } catch (error) {
-    throw error; // 오류를 다시 throw하여 호출자가 처리하도록
+    throw error; // Re-throw error for caller to handle
   }
 };
 
-// Realtime 구독 설정
+// Setup Realtime subscription
 const setupRealtimeSubscription = (roomId: string) => {
   if (realtimeChannel) {
     realtimeChannel.unsubscribe();
@@ -188,15 +188,15 @@ const setupRealtimeSubscription = (roomId: string) => {
       },
       (payload) => {
         const newMessage = formatMessageFromSupabase(payload.new as MessageCache, roomId);
-        
-        // 이미 존재하는 메시지인지 확인 (signature 기준)
+
+        // Check if message already exists (by signature)
         const existingMessageIndex = globalMessages.findIndex(msg => msg.id === newMessage.id);
-        
+
         if (existingMessageIndex !== -1) {
-          return; // 이미 존재하면 무시
+          return; // Ignore if already exists
         }
-        
-        // 새 메시지 추가
+
+        // Add new message
         globalMessages = [...globalMessages, newMessage];
         notifyListeners();
       }
@@ -205,27 +205,27 @@ const setupRealtimeSubscription = (roomId: string) => {
 };
 
 export const addMessage = async (roomId: string, message: Omit<ChatMessage, 'id' | 'timestamp' | 'roomId'>) => {
-  // txHash가 있으면 이미 signature로 사용
+  // Use txHash as signature if available
   const messageId = message.txHash || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  // 이미 존재하는 메시지인지 확인
+
+  // Check if message already exists
   if (globalMessages.find(msg => msg.id === messageId)) {
     return;
   }
-  
-  // 즉시 UI에 표시하기 위해 메시지 생성
+
+  // Create message for immediate UI display
   const newMessage: ChatMessage = {
     ...message,
     id: messageId,
     timestamp: Date.now(),
     roomId,
   };
-  
-  // 로컬 상태에 즉시 추가
+
+  // Add to local state immediately
   globalMessages = [...globalMessages, newMessage];
   notifyListeners();
-  
-  // 백그라운드에서 Supabase에 저장
+
+  // Save to Supabase in background
   const messageData = {
     content: message.content,
     trade_type: message.tradeType,
@@ -235,13 +235,13 @@ export const addMessage = async (roomId: string, message: Omit<ChatMessage, 'id'
     nickname: message.nickname,
     avatar: message.avatar,
   };
-  
+
   try {
     await saveMessageToSupabase(roomId, messageData);
-    // Realtime 구독이 이미 존재하는 메시지를 감지하면 무시함
+    // Realtime subscription ignores if message already exists
   } catch (error) {
     console.error('Failed to save message to Supabase:', error);
-    // 에러 발생 시 로컬 메시지 유지
+    // Keep local message on error
   }
 };
 
@@ -252,12 +252,12 @@ export const useChatMessages = (roomId: string) => {
   const [isClient, setIsClient] = useState(false);
   const { connected, publicKey } = useWallet();
 
-  // 클라이언트 사이드 렌더링 확인
+  // Check client-side rendering
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // 메시지 리스너 등록
+  // Register message listener
   useEffect(() => {
     if (!isClient) return;
 
@@ -266,14 +266,14 @@ export const useChatMessages = (roomId: string) => {
     };
 
     messageListeners.add(updateMessages);
-    updateMessages(); // 초기 메시지 로드
+    updateMessages(); // Load initial messages
 
     return () => {
       messageListeners.delete(updateMessages);
     };
   }, [isClient]);
 
-  // 룸별 메시지 로드 및 실시간 구독
+  // Load messages per room and setup realtime subscription
   useEffect(() => {
     if (!isClient || !roomId) return;
 
@@ -331,7 +331,7 @@ export const useChatMessages = (roomId: string) => {
   };
 };
 
-// 전역 정리 함수 (앱 종료 시 호출)
+// Global cleanup function (called on app exit)
 export function cleanupChatMessages() {
   globalMessages = [];
   messageListeners.clear();

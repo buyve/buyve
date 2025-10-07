@@ -8,7 +8,7 @@ export type ChartDataPoint = {
 export type TimePeriod = '1H' | '1D' | '1W' | '1M' | 'All';
 
 /**
- * 토큰의 가격 차트 데이터를 가져옵니다 (API 라우트 사용)
+ * Fetch token price chart data (using API route)
  */
 export async function fetchTokenChart(
   tokenAddress: string,
@@ -43,10 +43,10 @@ export async function fetchTokenChart(
 }
 
 /**
- * 토큰의 현재 가격을 가져옵니다 (미구현 - 필요시 추가)
+ * Fetch current token price (not implemented - add if needed)
  */
 export async function fetchTokenPrice(tokenAddress: string): Promise<number> {
-  // 현재 가격은 차트 데이터의 마지막 포인트에서 가져올 수 있음
+  // Current price can be retrieved from the last point of chart data
   try {
     const chartData = await fetchTokenChart(tokenAddress, '1D');
     if (chartData.length > 0) {
@@ -59,7 +59,7 @@ export async function fetchTokenPrice(tokenAddress: string): Promise<number> {
 }
 
 /**
- * 폴백용 더미 차트 데이터 생성
+ * Generate fallback dummy chart data
  */
 export function generateFallbackChartData(
   period: TimePeriod = '1D',
@@ -69,43 +69,43 @@ export function generateFallbackChartData(
   const data: ChartDataPoint[] = [];
   let price = basePrice;
   const now = Date.now();
-  const interval = period === '1H' ? 60 * 1000 : 
-                  period === '1D' ? 60 * 60 * 1000 : 
+  const interval = period === '1H' ? 60 * 1000 :
+                  period === '1D' ? 60 * 60 * 1000 :
                   24 * 60 * 60 * 1000;
-  
+
   for (let i = dataPoints - 1; i >= 0; i--) {
-    // 랜덤한 가격 변동 (-2% ~ +2%)
+    // Random price fluctuation (-2% ~ +2%)
     const change = (Math.random() - 0.5) * 0.04;
     price = price * (1 + change);
-    
+
     data.push({
       timestamp: now - (i * interval),
       price: price
     });
   }
-  
+
   return data;
 }
 
 /**
- * 간단한 가격 기반 차트 데이터 생성 (Jupiter API 사용)
+ * Generate simple price-based chart data (using Jupiter API)
  */
 export async function fetchSimpleTokenPrice(tokenAddress: string): Promise<number | null> {
   try {
-    // Jupiter Price API v2 사용
+    // Use Jupiter Price API v2
     const response = await fetch(`https://price.jup.ag/v6/price?ids=${tokenAddress}`);
-    
+
     if (!response.ok) {
       throw new Error(`Jupiter API error: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     if (data.data && data.data[tokenAddress]) {
       const price = data.data[tokenAddress].price;
       return price;
     }
-    
+
     throw new Error('Price data not found');
   } catch {
     return null;
@@ -113,7 +113,7 @@ export async function fetchSimpleTokenPrice(tokenAddress: string): Promise<numbe
 }
 
 /**
- * 현재 가격 기반으로 시뮬레이션된 차트 데이터 생성
+ * Generate simulated chart data based on current price
  */
 export function generateSimulatedChartData(
   currentPrice: number,
@@ -121,77 +121,77 @@ export function generateSimulatedChartData(
 ): ChartDataPoint[] {
   const now = Date.now();
   let dataPoints = 24;
-  let interval = 60 * 60 * 1000; // 1시간
-  let volatility = 0.015; // 1.5% 변동성
-  
+  let interval = 60 * 60 * 1000; // 1 hour
+  let volatility = 0.015; // 1.5% volatility
+
   switch (period) {
     case '1H':
       dataPoints = 12;
-      interval = 5 * 60 * 1000; // 5분
+      interval = 5 * 60 * 1000; // 5 minutes
       volatility = 0.005; // 0.5%
       break;
     case '1D':
       dataPoints = 24;
-      interval = 60 * 60 * 1000; // 1시간
+      interval = 60 * 60 * 1000; // 1 hour
       volatility = 0.015; // 1.5%
       break;
     case '1W':
       dataPoints = 28;
-      interval = 6 * 60 * 60 * 1000; // 6시간
+      interval = 6 * 60 * 60 * 1000; // 6 hours
       volatility = 0.03; // 3%
       break;
     case '1M':
       dataPoints = 30;
-      interval = 24 * 60 * 60 * 1000; // 1일
+      interval = 24 * 60 * 60 * 1000; // 1 day
       volatility = 0.05; // 5%
       break;
     case 'All':
       dataPoints = 50;
-      interval = 7 * 24 * 60 * 60 * 1000; // 1주일
+      interval = 7 * 24 * 60 * 60 * 1000; // 1 week
       volatility = 0.08; // 8%
       break;
   }
 
   const data: ChartDataPoint[] = [];
   let price = currentPrice;
-  
-  // 과거 시점부터 현재까지 시뮬레이션
+
+  // Simulate from past to present
   for (let i = dataPoints - 1; i >= 0; i--) {
     const timestamp = now - (i * interval);
-    
+
     if (i === 0) {
-      // 마지막 포인트는 현재 가격
+      // Last point is current price
       price = currentPrice;
     } else {
-      // 랜덤 워크로 과거 가격 시뮬레이션
+      // Simulate past price with random walk
       const randomChange = (Math.random() - 0.5) * volatility * 2;
-      const trend = i / dataPoints * 0.02; // 약간의 상승 추세
+      const trend = i / dataPoints * 0.02; // Slight upward trend
       price = price * (1 - randomChange - trend);
-      
-      // 가격이 현재가의 50%~150% 범위를 벗어나지 않도록 제한
+
+      // Keep price within 50%~150% of current price
       price = Math.max(price, currentPrice * 0.5);
       price = Math.min(price, currentPrice * 1.5);
     }
-    
+
     data.push({
       timestamp,
-      price: Math.max(price, 0.0001) // 최소값 보장
+      price: Math.max(price, 0.0001) // Ensure minimum value
     });
   }
-  
-  return data.reverse(); // 시간 순서대로 정렬
+
+  return data.reverse(); // Sort in chronological order
 }
 
 /**
- * 개선된 토큰 차트 데이터 가져오기 (폴백 포함)
+ * Fetch token chart data with fallback (improved)
  */
 export async function fetchTokenChartWithFallback(
   tokenAddress: string,
   period: TimePeriod = '1D'
 ): Promise<ChartDataPoint[]> {
   try {
-    
-    // 1차: GeckoTerminal API 시도
+
+    // 1st attempt: Try GeckoTerminal API
     try {
       const response = await fetchTokenChart(tokenAddress, period);
       if (response && response.length > 0) {
@@ -199,17 +199,17 @@ export async function fetchTokenChartWithFallback(
       }
     } catch {
     }
-    
-    // 2차: Jupiter 가격 기반 시뮬레이션
+
+    // 2nd attempt: Simulation based on Jupiter price
     const currentPrice = await fetchSimpleTokenPrice(tokenAddress);
     if (currentPrice) {
       return generateSimulatedChartData(currentPrice, period);
     }
-    
-    // 3차: 완전 폴백 (기본 가격으로 시뮬레이션)
+
+    // 3rd attempt: Complete fallback (simulation with default price)
     const fallbackPrice = tokenAddress === 'So11111111111111111111111111111111111111112' ? 200 : 1;
     return generateSimulatedChartData(fallbackPrice, period);
-    
+
   } catch (error) {
     throw error;
   }

@@ -3,31 +3,31 @@ import { PublicKey } from '@solana/web3.js'
 import nacl from 'tweetnacl'
 import bs58 from 'bs58'
 
-// JWT 시크릿 키 (환경 변수에서 가져오기)
+// JWT secret key (retrieved from environment variables)
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is not configured')
 }
 
-// JWT 페이로드 타입 정의
+// JWT payload type definition
 interface JWTPayload {
   walletAddress: string
   iat: number
   exp: number
 }
 
-// JWT 토큰 생성
+// Generate JWT token
 export function generateJWT(walletAddress: string): string {
   const payload: JWTPayload = {
     walletAddress,
     iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24시간 만료
+    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // Expires in 24 hours
   }
-  
+
   return jwt.sign(payload, JWT_SECRET)
 }
 
-// JWT 토큰 검증
+// Verify JWT token
 export function verifyJWT(token: string): { walletAddress: string } | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload
@@ -37,23 +37,23 @@ export function verifyJWT(token: string): { walletAddress: string } | null {
   }
 }
 
-// Solana 지갑 서명 검증
+// Verify Solana wallet signature
 export function verifyWalletSignature(
   message: string,
   signature: string,
   publicKey: string
 ): boolean {
   try {
-    // 메시지를 Uint8Array로 변환
+    // Convert message to Uint8Array
     const messageBytes = new TextEncoder().encode(message)
 
-    // 서명을 Uint8Array로 변환 (Base58 디코딩)
+    // Convert signature to Uint8Array (Base58 decoding)
     const signatureBytes = bs58.decode(signature)
 
-    // 공개키를 Uint8Array로 변환
+    // Convert public key to Uint8Array
     const publicKeyBytes = new PublicKey(publicKey).toBytes()
 
-    // 서명 검증
+    // Verify signature
     const isValid = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes)
 
     return isValid
@@ -63,30 +63,30 @@ export function verifyWalletSignature(
   }
 }
 
-// 사용자 프로필 생성 또는 업데이트 (RLS 우회 버전)
+// Create or update user profile (RLS bypass version)
 export async function createOrUpdateProfile(walletAddress: string, nickname?: string) {
   try {
-    // 서버 사이드에서는 일반 supabase 클라이언트 사용 (RLS 우회 시도)
+    // Use regular supabase client on server side (attempting to bypass RLS)
     const { supabase } = await import('./supabase')
-    
-    // 먼저 기존 프로필 확인
+
+    // First check if profile already exists
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('*')
       .eq('wallet_address', walletAddress)
       .single()
 
-    // 프로필 데이터 준비
+    // Prepare profile data
     const profileData: any = {
       wallet_address: walletAddress,
       updated_at: new Date().toISOString()
     };
 
-    // 닉네임 처리: 명시적으로 제공된 경우만 업데이트
+    // Nickname handling: update only when explicitly provided
     if (nickname !== undefined) {
       profileData.nickname = nickname;
     } else if (!existingProfile) {
-      // 새 프로필이고 닉네임이 없는 경우만 기본값 설정
+      // Set default value only for new profiles without nickname
       profileData.nickname = `User_${walletAddress.slice(0, 8)}`;
     }
     
@@ -111,38 +111,38 @@ export async function createOrUpdateProfile(walletAddress: string, nickname?: st
   }
 }
 
-// 인증 메시지 생성
+// Generate authentication message
 export function generateAuthMessage(walletAddress: string): string {
   const timestamp = Date.now()
   return `TradeChat Authentication\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\n\nSign this message to authenticate with TradeChat.`
 }
 
-// 인증 토큰으로 Supabase 세션 생성
+// Create Supabase session with authentication token
 export async function createSupabaseSession(walletAddress: string) {
-  // 서버 사이드에서만 실행 가능
+  // Can only be executed on server side
   if (typeof window !== 'undefined') {
     throw new Error('createSupabaseSession can only be called on the server side')
   }
 
   try {
-    // Supabase Admin 동적 import (빌드 시 에러 방지)
+    // Dynamically import Supabase Admin (prevent build errors)
     const { supabaseAdmin } = await import('./supabase')
-    
+
     if (!supabaseAdmin) {
       throw new Error('Supabase admin client is not available')
     }
 
-    // JWT 토큰 생성
+    // Generate JWT token
     const token = generateJWT(walletAddress)
-    
-    // Supabase에서 사용자 세션 생성
+
+    // Create user session in Supabase
     const { data, error } = await supabaseAdmin.auth.signInWithPassword({
       email: `${walletAddress}@tradechat.local`,
       password: token,
     })
 
     if (error) {
-      // 사용자가 없으면 생성
+      // Create user if doesn't exist
       const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.signUp({
         email: `${walletAddress}@tradechat.local`,
         password: token,

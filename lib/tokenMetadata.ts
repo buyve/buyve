@@ -10,7 +10,7 @@ import { Connection, ParsedAccountData, PublicKey } from '@solana/web3.js';
 import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { tokenMetadataCache } from './tokenMetadataCache';
 
-// 🌟 Solana 토큰 메타데이터 인터페이스
+// Solana token metadata interface
 export interface TokenMetadata {
   mint: string;
   name: string;
@@ -31,7 +31,7 @@ export interface TokenMetadata {
   };
 }
 
-// 🌟 토큰 메타데이터 조회 에러 타입
+// Token metadata lookup error type
 export class TokenMetadataError extends Error {
   constructor(
     message: string,
@@ -131,19 +131,19 @@ async function fetchToken2022Metadata(
 }
 
 /**
- * 🎯 토큰 주소로부터 메타데이터 조회 (캐싱 적용)
- * @param tokenAddress - 조회할 토큰의 주소
- * @returns TokenMetadata 또는 null
+ * Fetch metadata from token address (with caching)
+ * @param tokenAddress - Address of the token to lookup
+ * @returns TokenMetadata or null
  */
 export async function fetchTokenMetadata(
   tokenAddress: string
 ): Promise<TokenMetadata | null> {
-  // 캐시 확인
+  // Check cache
   const cached = tokenMetadataCache.get(tokenAddress);
   if (cached) {
-    // stale-while-revalidate 패턴: 오래된 데이터도 먼저 반환하고 백그라운드에서 업데이트
+    // stale-while-revalidate pattern: return stale data first, update in background
     if (tokenMetadataCache.isStale(tokenAddress)) {
-      // 백그라운드에서 업데이트 (await 하지 않음)
+      // Update in background (don't await)
       fetchTokenMetadataFromChain(tokenAddress).then(metadata => {
         if (metadata) {
           tokenMetadataCache.set(tokenAddress, metadata);

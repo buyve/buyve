@@ -38,26 +38,26 @@ export default function WalletAdapter({
     wallet
   } = useWallet();
   
-  // 클라이언트 마운트 상태
+  // Client mount state
   const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
     setHasMounted(true);
   }, [isConnected, address, wallet?.adapter?.name]);
 
-  // 주소 복사
+  // Copy address
   const copyAddress = async () => {
     if (address && hasMounted) {
       try {
         await navigator.clipboard.writeText(address);
-        alert('주소가 복사되었습니다!');
+        alert('Address copied!');
       } catch {
-        alert('주소 복사에 실패했습니다');
+        alert('Failed to copy address');
       }
     }
   };
 
-  // Solana Explorer 열기
+  // Open Solana Explorer
   const openExplorer = () => {
     if (address && hasMounted) {
       const url = `https://solscan.io/account/${address}`;
@@ -65,13 +65,13 @@ export default function WalletAdapter({
     }
   };
 
-  // 주소 포맷팅
+  // Format address
   const formatAddress = (address: string) => {
     if (!address) return '';
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
 
-  // 잔고 포맷팅
+  // Format balance
   const formatBalance = (balance: number | null) => {
     if (balance === null) return '0.0000';
     return balance.toFixed(4);
@@ -83,7 +83,7 @@ export default function WalletAdapter({
         <Card>
           <CardContent className="flex items-center justify-center p-6">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="ml-2">로딩 중...</span>
+            <span className="ml-2">Loading...</span>
           </CardContent>
         </Card>
       </div>
@@ -92,7 +92,7 @@ export default function WalletAdapter({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* 에러 메시지 */}
+      {/* Error message */}
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />

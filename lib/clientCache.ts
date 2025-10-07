@@ -1,5 +1,5 @@
-// IndexedDB를 활용한 클라이언트 사이드 캐싱
-// 차트 데이터를 로컬에 저장하여 네트워크 요청 최소화
+// Client-side caching using IndexedDB
+// Store chart data locally to minimize network requests
 
 interface CachedData {
   tokenAddress: string;
@@ -11,8 +11,8 @@ interface CachedData {
 const DB_NAME = 'TradeChatCache';
 const DB_VERSION = 1;
 const STORE_NAME = 'priceData';
-const CACHE_DURATION = 5 * 60 * 1000; // 5분
-const MAX_CACHE_SIZE = 50; // 최대 50개 토큰 캐시
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 50; // Maximum 50 tokens cached
 
 class ClientCache {
   private db: IDBDatabase | null = null;
@@ -22,7 +22,7 @@ class ClientCache {
     this.isSupported = typeof window !== 'undefined' && 'indexedDB' in window;
   }
 
-  // DB 초기화
+  // Initialize DB
   async init(): Promise<void> {
     if (!this.isSupported || this.db) return;
 
@@ -30,7 +30,7 @@ class ClientCache {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        console.error('IndexedDB 초기화 실패');
+        console.error('IndexedDB initialization failed');
         this.isSupported = false;
       };
 
@@ -40,28 +40,28 @@ class ClientCache {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        
+
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const store = db.createObjectStore(STORE_NAME, { keyPath: 'tokenAddress' });
           store.createIndex('lastUpdated', 'lastUpdated', { unique: false });
         }
       };
 
-      // 초기화 완료 대기
+      // Wait for initialization to complete
       await new Promise((resolve, reject) => {
         request.onsuccess = () => resolve(undefined);
         request.onerror = () => reject(new Error('IndexedDB init failed'));
       });
 
-      // 오래된 캐시 정리
+      // Clean up old cache
       await this.cleanupOldCache();
     } catch (error) {
-      console.error('Cache 초기화 실패:', error);
+      console.error('Cache initialization failed:', error);
       this.isSupported = false;
     }
   }
 
-  // 캐시 데이터 가져오기
+  // Get cached data
   async get(tokenAddress: string): Promise<CachedData | null> {
     if (!this.isSupported || !this.db) return null;
 
@@ -77,7 +77,7 @@ class ClientCache {
 
       if (!data) return null;
 
-      // 캐시 만료 확인
+      // Check cache expiration
       if (Date.now() - data.lastUpdated > CACHE_DURATION) {
         await this.delete(tokenAddress);
         return null;
@@ -85,12 +85,12 @@ class ClientCache {
 
       return data;
     } catch (error) {
-      console.error('Cache 조회 실패:', error);
+      console.error('Cache lookup failed:', error);
       return null;
     }
   }
 
-  // 캐시 데이터 저장
+  // Store cached data
   async set(tokenAddress: string, chartData: unknown[]): Promise<void> {
     if (!this.isSupported || !this.db) return;
 
@@ -104,57 +104,57 @@ class ClientCache {
 
       const transaction = this.db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      
+
       await new Promise<void>((resolve, reject) => {
         const request = store.put(data);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
 
-      // 캐시 크기 관리
+      // Maintain cache size
       await this.maintainCacheSize();
     } catch (error) {
-      console.error('Cache 저장 실패:', error);
+      console.error('Cache save failed:', error);
     }
   }
 
-  // 캐시 삭제
+  // Delete cache
   async delete(tokenAddress: string): Promise<void> {
     if (!this.isSupported || !this.db) return;
 
     try {
       const transaction = this.db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      
+
       await new Promise<void>((resolve, reject) => {
         const request = store.delete(tokenAddress);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error('Cache 삭제 실패:', error);
+      console.error('Cache deletion failed:', error);
     }
   }
 
-  // 모든 캐시 삭제
+  // Clear all cache
   async clear(): Promise<void> {
     if (!this.isSupported || !this.db) return;
 
     try {
       const transaction = this.db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      
+
       await new Promise<void>((resolve, reject) => {
         const request = store.clear();
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error('Cache 전체 삭제 실패:', error);
+      console.error('Cache clear failed:', error);
     }
   }
 
-  // 오래된 캐시 정리
+  // Clean up old cache
   private async cleanupOldCache(): Promise<void> {
     if (!this.db) return;
 
@@ -162,7 +162,7 @@ class ClientCache {
       const transaction = this.db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const index = store.index('lastUpdated');
-      
+
       const cutoffTime = Date.now() - CACHE_DURATION;
       const range = IDBKeyRange.upperBound(cutoffTime);
       const request = index.openCursor(range);
@@ -175,11 +175,11 @@ class ClientCache {
         }
       };
     } catch (error) {
-      console.error('오래된 캐시 정리 실패:', error);
+      console.error('Old cache cleanup failed:', error);
     }
   }
 
-  // 캐시 크기 유지
+  // Maintain cache size
   private async maintainCacheSize(): Promise<void> {
     if (!this.db) return;
 
@@ -190,9 +190,9 @@ class ClientCache {
 
       countRequest.onsuccess = async () => {
         const count = countRequest.result;
-        
+
         if (count > MAX_CACHE_SIZE) {
-          // 가장 오래된 항목 삭제
+          // Delete oldest entries
           const index = store.index('lastUpdated');
           const cursor = index.openCursor();
           let deleted = 0;
@@ -209,11 +209,11 @@ class ClientCache {
         }
       };
     } catch (error) {
-      console.error('캐시 크기 관리 실패:', error);
+      console.error('Cache size management failed:', error);
     }
   }
 
-  // 캐시 통계
+  // Cache statistics
   async getStats(): Promise<{ count: number; totalSize: number }> {
     if (!this.isSupported || !this.db) {
       return { count: 0, totalSize: 0 };
@@ -222,23 +222,23 @@ class ClientCache {
     try {
       const transaction = this.db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
-      
+
       const count = await new Promise<number>((resolve, reject) => {
         const request = store.count();
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
 
-      // 대략적인 크기 계산 (실제 크기는 브라우저마다 다름)
-      const totalSize = count * 10 * 1024; // 토큰당 약 10KB 추정
+      // Approximate size calculation (actual size varies by browser)
+      const totalSize = count * 10 * 1024; // Estimated ~10KB per token
 
       return { count, totalSize };
     } catch (error) {
-      console.error('캐시 통계 조회 실패:', error);
+      console.error('Cache stats lookup failed:', error);
       return { count: 0, totalSize: 0 };
     }
   }
 }
 
-// 싱글톤 인스턴스
+// Singleton instance
 export const clientCache = new ClientCache();

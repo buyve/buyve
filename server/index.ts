@@ -14,7 +14,7 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 
-// 🚀 Redis 클라이언트 설정 (Socket.IO 스케일링용)
+// Redis client setup (for Socket.IO scaling)
 const REDIS_URL = process.env.REDIS_URL;
 
 if (!REDIS_URL) {
@@ -31,7 +31,7 @@ const pubClient = createClient({
 });
 const subClient = pubClient.duplicate();
 
-// Socket.IO 서버 설정 with Redis Adapter
+// Socket.IO server setup with Redis Adapter
 const allowedSocketOrigins = [
   process.env.FRONTEND_URL,
   'https://buyve.vercel.app',
@@ -45,7 +45,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  // 🎯 성능 최적화 설정
+  // Performance optimization settings
   transports: ['websocket', 'polling'],
   pingTimeout: 60000,
   pingInterval: 25000,
@@ -53,7 +53,7 @@ const io = new Server(server, {
   allowEIO3: true
 });
 
-// Redis Adapter 적용
+// Apply Redis Adapter
 async function setupRedisAdapter() {
   if (!REDIS_URL) {
     return;
@@ -69,7 +69,7 @@ async function setupRedisAdapter() {
   }
 }
 
-// 미들웨어 설정 - CORS 보안 강화
+// Middleware setup - enhanced CORS security
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://buyve.vercel.app',
@@ -79,7 +79,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // origin이 없는 경우 (Postman, curl 등) 허용 (선택적)
+    // Allow when no origin (Postman, curl, etc.) - optional
     if (!origin) {
       return callback(null, true);
     }
@@ -95,10 +95,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// API 라우트
+// API routes
 app.use('/api/chat', chatRoutes);
 
-// 상태 확인 엔드포인트
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -108,34 +108,34 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Socket.IO 핸들러 설정
+// Socket.IO handler setup
 setupSocketHandlers(io);
 
-// 서버 시작
+// Start server
 const PORT = process.env.PORT || 3001;
 
 async function startServer() {
   await setupRedisAdapter();
-  
+
   server.listen(PORT, () => {
-    // 서버 시작 로그 제거됨
+    // Server start log removed
   });
 }
 
 startServer();
 
-// 우아한 종료
+// Graceful shutdown
 process.on('SIGTERM', async () => {
-  
+
   try {
     await pubClient.quit();
     await subClient.quit();
     await db.close();
     server.close();
   } catch {
-    // 종료 중 오류 처리 로그 제거됨
+    // Error handling log during shutdown removed
   }
-  
+
   process.exit(0);
 });
 

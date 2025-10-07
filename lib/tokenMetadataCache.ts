@@ -10,16 +10,16 @@ interface CachedTokenMetadata {
 }
 
 interface TokenMetadataCacheConfig {
-  maxSize: number;           // 최대 캐시 항목 수
-  ttl: number;              // Time to Live (밀리초)
-  staleWhileRevalidate: number; // 백그라운드 재검증 시간
+  maxSize: number;           // Maximum cache entries
+  ttl: number;              // Time to Live (milliseconds)
+  staleWhileRevalidate: number; // Background revalidation time
 }
 
 class TokenMetadataCache {
   private cache: Map<string, CachedTokenMetadata>;
   private pendingRequests: Map<string, Promise<TokenMetadata | null>>;
   private config: TokenMetadataCacheConfig;
-  private lruOrder: string[]; // LRU 캐시 관리를 위한 순서
+  private lruOrder: string[]; // Order for LRU cache management
 
   constructor(config?: Partial<TokenMetadataCacheConfig>) {
     this.cache = new Map();
@@ -27,12 +27,12 @@ class TokenMetadataCache {
     this.lruOrder = [];
     this.config = {
       maxSize: 100,
-      ttl: 24 * 60 * 60 * 1000, // 24시간
-      staleWhileRevalidate: 60 * 60 * 1000, // 1시간
+      ttl: 24 * 60 * 60 * 1000, // 24 hours
+      staleWhileRevalidate: 60 * 60 * 1000, // 1 hour
       ...config
     };
 
-    // 브라우저 환경에서만 실행
+    // Execute only in browser environment
     if (typeof window !== 'undefined') {
       this.loadFromLocalStorage();
       this.startPeriodicCleanup();
@@ -40,11 +40,11 @@ class TokenMetadataCache {
   }
 
   /**
-   * 캐시에서 메타데이터 가져오기
+   * Get metadata from cache
    */
   get(tokenAddress: string): TokenMetadata | null {
     const cached = this.cache.get(tokenAddress);
-    
+
     if (!cached) {
       return null;
     }
@@ -52,16 +52,16 @@ class TokenMetadataCache {
     const now = Date.now();
     const age = now - cached.timestamp;
 
-    // TTL 확인
+    // Check TTL
     if (age > this.config.ttl) {
       this.delete(tokenAddress);
       return null;
     }
 
-    // LRU 업데이트
+    // Update LRU
     this.updateLRU(tokenAddress);
-    
-    // 접근 카운트 및 시간 업데이트
+
+    // Update access count and time
     cached.lastAccessed = now;
     cached.accessCount++;
 
@@ -69,12 +69,12 @@ class TokenMetadataCache {
   }
 
   /**
-   * 캐시에 메타데이터 저장
+   * Save metadata to cache
    */
   set(tokenAddress: string, metadata: TokenMetadata): void {
     const now = Date.now();
-    
-    // 캐시 크기 제한 확인
+
+    // Check cache size limit
     if (this.cache.size >= this.config.maxSize && !this.cache.has(tokenAddress)) {
       this.evictLRU();
     }
@@ -91,7 +91,7 @@ class TokenMetadataCache {
   }
 
   /**
-   * 캐시에서 항목 삭제
+   * Delete entry from cache
    */
   delete(tokenAddress: string): void {
     this.cache.delete(tokenAddress);
@@ -100,7 +100,7 @@ class TokenMetadataCache {
   }
 
   /**
-   * 전체 캐시 클리어
+   * Clear entire cache
    */
   clear(): void {
     this.cache.clear();
@@ -112,48 +112,48 @@ class TokenMetadataCache {
   }
 
   /**
-   * 캐시 상태 확인
+   * Check cache status
    */
   has(tokenAddress: string): boolean {
     const cached = this.cache.get(tokenAddress);
     if (!cached) return false;
-    
+
     const age = Date.now() - cached.timestamp;
     return age <= this.config.ttl;
   }
 
   /**
-   * 캐시가 stale 상태인지 확인
+   * Check if cache is stale
    */
   isStale(tokenAddress: string): boolean {
     const cached = this.cache.get(tokenAddress);
     if (!cached) return true;
-    
+
     const age = Date.now() - cached.timestamp;
     return age > this.config.staleWhileRevalidate;
   }
 
   /**
-   * 진행 중인 요청 등록 (중복 요청 방지)
+   * Register pending request (prevent duplicate requests)
    */
   setPending(tokenAddress: string, promise: Promise<TokenMetadata | null>): void {
     this.pendingRequests.set(tokenAddress, promise);
-    
-    // 완료되면 제거
+
+    // Remove when completed
     promise.finally(() => {
       this.pendingRequests.delete(tokenAddress);
     });
   }
 
   /**
-   * 진행 중인 요청 확인
+   * Check pending request
    */
   getPending(tokenAddress: string): Promise<TokenMetadata | null> | undefined {
     return this.pendingRequests.get(tokenAddress);
   }
 
   /**
-   * LRU 순서 업데이트
+   * Update LRU order
    */
   private updateLRU(tokenAddress: string): void {
     this.lruOrder = this.lruOrder.filter(addr => addr !== tokenAddress);
@@ -161,11 +161,11 @@ class TokenMetadataCache {
   }
 
   /**
-   * LRU 기반 캐시 제거
+   * Evict cache based on LRU
    */
   private evictLRU(): void {
     if (this.lruOrder.length === 0) return;
-    
+
     const toEvict = this.lruOrder.shift();
     if (toEvict) {
       this.cache.delete(toEvict);
@@ -173,7 +173,7 @@ class TokenMetadataCache {
   }
 
   /**
-   * LocalStorage에 캐시 저장
+   * Save cache to LocalStorage
    */
   private saveToLocalStorage(): void {
     if (typeof window === 'undefined') return;
@@ -200,7 +200,7 @@ class TokenMetadataCache {
   }
 
   /**
-   * LocalStorage에서 캐시 로드
+   * Load cache from LocalStorage
    */
   private loadFromLocalStorage(): void {
     if (typeof window === 'undefined') return;
@@ -213,8 +213,8 @@ class TokenMetadataCache {
       if (parsed.version !== 1) return;
 
       const now = Date.now();
-      
-      // 유효한 캐시 항목만 로드
+
+      // Load only valid cache entries
       parsed.data.forEach((item: any) => {
         const age = now - item.value.timestamp;
         if (age <= this.config.ttl) {
@@ -222,8 +222,8 @@ class TokenMetadataCache {
         }
       });
 
-      // LRU 순서 복원
-      this.lruOrder = parsed.lruOrder.filter((addr: string) => 
+      // Restore LRU order
+      this.lruOrder = parsed.lruOrder.filter((addr: string) =>
         this.cache.has(addr)
       );
 
@@ -233,10 +233,10 @@ class TokenMetadataCache {
   }
 
   /**
-   * 주기적 캐시 정리
+   * Periodic cache cleanup
    */
   private startPeriodicCleanup(): void {
-    // 30분마다 만료된 캐시 정리
+    // Clean up expired cache every 30 minutes
     setInterval(() => {
       const now = Date.now();
       const toDelete: string[] = [];
@@ -252,7 +252,7 @@ class TokenMetadataCache {
   }
 
   /**
-   * 캐시 통계
+   * Cache statistics
    */
   getStats(): {
     size: number;
@@ -261,7 +261,7 @@ class TokenMetadataCache {
   } {
     const entries = Array.from(this.cache.entries());
     const totalAccess = entries.reduce((sum, [_, value]) => sum + value.accessCount, 0);
-    
+
     const mostAccessed = entries
       .sort((a, b) => b[1].accessCount - a[1].accessCount)
       .slice(0, 10)
@@ -278,7 +278,7 @@ class TokenMetadataCache {
   }
 
   /**
-   * 캐시 예열 (자주 사용되는 토큰 미리 로드)
+   * Preheat cache (preload frequently used tokens)
    */
   async preheat(tokenAddresses: string[], fetchFn: (address: string) => Promise<TokenMetadata | null>): Promise<void> {
     const promises = tokenAddresses.map(async (address) => {
@@ -298,8 +298,8 @@ class TokenMetadataCache {
   }
 }
 
-// 싱글톤 인스턴스
+// Singleton instance
 export const tokenMetadataCache = new TokenMetadataCache();
 
-// 타입 내보내기
+// Export types
 export type { TokenMetadataCache, TokenMetadataCacheConfig };

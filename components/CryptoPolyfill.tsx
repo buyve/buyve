@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 export default function CryptoPolyfill() {
   useEffect(() => {
-    // crypto.randomUUID 폴리필
+    // crypto.randomUUID polyfill
     if (typeof window !== 'undefined' && window.crypto && !window.crypto.randomUUID) {
       window.crypto.randomUUID = function() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

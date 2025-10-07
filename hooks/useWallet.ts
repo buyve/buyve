@@ -10,15 +10,15 @@ import bs58 from 'bs58';
 
 export const DEFAULT_AVATARS = ['👤', '🧑', '👩', '🤵', '👩‍💼', '🧑‍💼', '👨‍💼', '🧙‍♂️', '🧙‍♀️', '🥷'];
 
-// 전역 인증 상태 관리 (React 상태 시스템과 독립적)
+// Global authentication state management (independent of React state system)
 const authenticatingAddresses = new Set<string>();
 const completedAddresses = new Set<string>();
 const authenticationPromises = new Map<string, Promise<any>>();
 
-// 디바운싱을 위한 타이머
+// Timer for debouncing
 let walletConnectDebounceTimer: NodeJS.Timeout | null = null;
 
-// 프로필 로드 중 상태 관리
+// Profile loading state management
 const loadingProfiles = new Set<string>();
 
 export const formatWalletAddress = (address: string): string => {
@@ -62,27 +62,27 @@ export function useWalletInternal() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
   
-  // 지갑 주소
+  // Wallet address
   const address = publicKey?.toBase58() || null;
-  
-  // 프로필에서 닉네임과 아바타 가져오기 (메모이제이션으로 안정화)
+
+  // Get nickname and avatar from profile (stabilized with memoization)
   const { nickname, avatar } = useMemo(() => {
     const profileNickname = profile?.nickname || '';
     const rawAvatar = profile?.avatar_url;
     
-    
-    let processedAvatar = DEFAULT_AVATARS[0]; // 기본값
-    
+
+    let processedAvatar = DEFAULT_AVATARS[0]; // Default value
+
     if (!rawAvatar) {
       processedAvatar = DEFAULT_AVATARS[0];
     } else if (rawAvatar.startsWith('emoji:')) {
-      // emoji: 접두사가 있으면 제거 (이모지인 경우)
+      // Remove emoji: prefix (for emoji avatars)
       processedAvatar = rawAvatar.replace('emoji:', '');
     } else if (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')) {
-      // HTTP URL이나 data URL인 경우 그대로 반환
+      // Return as-is for HTTP URL or data URL
       processedAvatar = rawAvatar;
     } else {
-      // 그 외의 경우 (이모지 등) 그대로 반환
+      // Return as-is for other cases (emojis, etc.)
       processedAvatar = rawAvatar;
     }
     
@@ -91,30 +91,30 @@ export function useWalletInternal() {
       avatar: processedAvatar
     };
   }, [profile?.nickname, profile?.avatar_url]);
-  
-  // 지갑 인증
+
+  // Wallet authentication
   const authenticateWallet = useCallback(async (walletAddress: string) => {
     try {
-      // 1. 서명할 메시지 요청
+      // 1. Request message to sign
       const msgResponse = await fetch(`/api/auth/wallet?walletAddress=${encodeURIComponent(walletAddress)}`, {
         credentials: 'include'
       });
-      
+
       if (!msgResponse.ok) {
         throw new Error('Failed to get auth message');
       }
-      
+
       const { message } = await msgResponse.json();
-      
-      // 2. 지갑으로 메시지 서명
+
+      // 2. Sign message with wallet
       if (!signMessage) {
         throw new Error('Wallet does not support message signing');
       }
-      
+
       const encodedMessage = new TextEncoder().encode(message);
       const signature = await signMessage(encodedMessage);
-      
-      // 3. 서명 검증 및 토큰 생성
+
+      // 3. Verify signature and generate token
       const authResponse = await fetch('/api/auth/wallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,11 +135,11 @@ export function useWalletInternal() {
       if (!authResult.success) {
         throw new Error(authResult.error || 'Authentication failed');
       }
-      
-      // JWT 토큰 저장
+
+      // Save JWT token
       if (authResult.authToken) {
         setAuthToken(authResult.authToken);
-        // 로컬 스토리지에도 저장 (페이지 새로고침 시 사용)
+        // Also save to local storage (for page refresh)
         localStorage.setItem('authToken', authResult.authToken);
       }
       
@@ -151,9 +151,9 @@ export function useWalletInternal() {
   }, [signMessage]);
   
 
-  // 프로필 로드
+  // Load profile
   const loadProfile = useCallback(async (walletAddress: string) => {
-    // 이미 로드 중인 주소는 건너뛰기
+    // Skip if already loading this address
     if (loadingProfiles.has(walletAddress)) {
       return;
     }
@@ -165,7 +165,7 @@ export function useWalletInternal() {
     try {
       const headers: HeadersInit = {};
 
-      // 토큰이 있으면 Authorization 헤더 추가
+      // Add Authorization header if token exists
       const token = authToken || localStorage.getItem('authToken');
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -185,15 +185,15 @@ export function useWalletInternal() {
       if (result.success) {
         if (result.profile) {
           setProfile(result.profile);
-          
-          // 프로필 이미지 프리로딩
-          if (result.profile.avatar_url && 
-              (result.profile.avatar_url.startsWith('http') || 
+
+          // Preload profile image
+          if (result.profile.avatar_url &&
+              (result.profile.avatar_url.startsWith('http') ||
                result.profile.avatar_url.startsWith('data:'))) {
             ImageCacheManager.preload(result.profile.avatar_url);
           }
         } else {
-          // 프로필이 없으면 새로 생성
+          // Create new profile if none exists
           await createProfile(walletAddress);
         }
       } else {
@@ -201,20 +201,20 @@ export function useWalletInternal() {
       }
     } catch {
       setError('Failed to load profile');
-      // 프로필 로드 실패 시에도 빈 프로필로 설정하여 UI가 작동하도록 함
+      // Set empty profile even on failure to keep UI functional
       setProfile(null);
     } finally {
       loadingProfiles.delete(walletAddress);
       setIsLoadingProfile(false);
     }
   }, [authToken]);
-  
-  // 프로필 생성
+
+  // Create profile
   const createProfile = useCallback(async (walletAddress: string) => {
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      
-      // 토큰이 있으면 Authorization 헤더 추가
+
+      // Add Authorization header if token exists
       const token = authToken || localStorage.getItem('authToken');
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -246,24 +246,24 @@ export function useWalletInternal() {
       setError('Failed to create profile');
     }
   }, [setError, authToken]);
-  
-  // 프로필 업데이트
+
+  // Update profile
   const updateProfile = useCallback(async (updates: { nickname?: string; avatar?: string }) => {
     if (!address) return;
-    
+
     try {
-      // 아바타 URL 처리
+      // Process avatar URL
       let avatarUrl = updates.avatar || null;
       if (updates.avatar && !updates.avatar.startsWith('http') && !updates.avatar.startsWith('data:') && !updates.avatar.startsWith('emoji:')) {
-        // 이모지인 경우에만 emoji: 접두사 추가
+        // Add emoji: prefix only for emojis
         if (DEFAULT_AVATARS.includes(updates.avatar)) {
           avatarUrl = `emoji:${updates.avatar}`;
         }
       }
-      
+
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      
-      // 토큰이 있으면 Authorization 헤더 추가
+
+      // Add Authorization header if token exists
       const token = authToken || localStorage.getItem('authToken');
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -283,8 +283,8 @@ export function useWalletInternal() {
       const result = await response.json();
       if (result.success) {
         setProfile(result.profile);
-        
-        // 전역 프로필 업데이트 이벤트 발생
+
+        // Dispatch global profile update event
         const profileUpdateEvent = new CustomEvent('profileUpdated', {
           detail: {
             walletAddress: address,
@@ -297,8 +297,8 @@ export function useWalletInternal() {
       setError('Failed to update profile');
     }
   }, [address, authToken]);
-  
-  // 잔고 조회
+
+  // Fetch balance
   const fetchBalance = useCallback(async () => {
     if (!publicKey || !connection) return;
 
@@ -330,24 +330,24 @@ export function useWalletInternal() {
     setBalance(null);
     setIsLoadingBalance(false);
   }, [publicKey, connection]);
-  
-  // 지갑 연결
+
+  // Connect wallet
   const connectWallet = useCallback(async () => {
     try {
       setError(null);
-      
+
       if (!wallet) {
-        // 지갑이 선택되지 않은 경우 모달 열기
+        // Open modal if wallet not selected
         setVisible(true);
         return;
       }
-      
-      // 이미 연결된 경우
+
+      // Already connected
       if (connected) {
         return;
       }
-      
-      // 연결 시도
+
+      // Attempt to connect
       await connect();
     } catch (error) {
       
@@ -364,8 +364,8 @@ export function useWalletInternal() {
       }
     }
   }, [wallet, connected, connect, setVisible]);
-  
-  // 지갑 연결 해제
+
+  // Disconnect wallet
   const disconnectWallet = useCallback(async () => {
     try {
       await disconnect();
@@ -376,16 +376,16 @@ export function useWalletInternal() {
       setError('Failed to disconnect wallet');
     }
   }, [disconnect]);
-  
-  // 에러 클리어
+
+  // Clear error
   const clearError = useCallback(() => {
     setError(null);
   }, []);
-  
-  // 기존 인증 상태 확인 (JWT 토큰 활용)
+
+  // Check existing authentication state (using JWT token)
   const checkExistingAuth = useCallback(async (walletAddress: string) => {
     try {
-      // 로컬 스토리지에서 토큰 확인
+      // Check token from local storage
       const storedToken = localStorage.getItem('authToken');
       if (!storedToken) {
         return false;
@@ -406,7 +406,7 @@ export function useWalletInternal() {
           return true;
         }
       } else {
-        // 토큰이 유효하지 않으면 제거
+        // Remove token if invalid
         localStorage.removeItem('authToken');
       }
     } catch (error) {
@@ -416,18 +416,18 @@ export function useWalletInternal() {
     return false;
   }, []);
 
-  // 지갑 연결 시 인증 및 프로필 로드 (디바운싱 적용)
+  // Authenticate and load profile on wallet connection (with debouncing)
   useEffect(() => {
-    // 기존 타이머 취소
+    // Cancel existing timer
     if (walletConnectDebounceTimer) {
       clearTimeout(walletConnectDebounceTimer);
     }
-    
-    // 100ms 디바운싱
+
+    // 100ms debouncing
     walletConnectDebounceTimer = setTimeout(() => {
       const handleWalletConnect = async () => {
       if (connected && address) {
-        // 이미 동일한 주소에 대한 인증 Promise가 진행 중이면 기다림
+        // Wait if authentication Promise is already in progress for the same address
         if (authenticationPromises.has(address)) {
           try {
             await authenticationPromises.get(address);
@@ -439,15 +439,15 @@ export function useWalletInternal() {
           }
         }
 
-        // 이미 인증 진행 중이면 스킵 (추가 보안)
+        // Skip if authentication already in progress (additional security)
         if (authenticatingAddresses.has(address)) {
           return;
         }
-        
-        // 인증 Promise 생성 및 캐시
+
+        // Create and cache authentication Promise
         const authPromise = (async () => {
           try {
-            // 1. 먼저 기존 인증 상태 확인 (쿠키의 JWT 토큰)
+            // 1. First check existing authentication state (JWT token in cookie)
             const hasValidAuth = await checkExistingAuth(address);
 
             if (hasValidAuth) {
@@ -455,112 +455,112 @@ export function useWalletInternal() {
               return;
             }
 
-            // 2. 이미 완료된 경우 프로필만 로드
+            // 2. Load profile only if already completed
             if (completedAddresses.has(address)) {
               await loadProfile(address);
               return;
             }
 
-            // 3. 새로운 인증 필요
+            // 3. New authentication required
             authenticatingAddresses.add(address);
 
             try {
               await authenticateWallet(address);
-              // 인증 성공 후 프로필 로드
+              // Load profile after successful authentication
               await loadProfile(address);
               completedAddresses.add(address);
             } finally {
               authenticatingAddresses.delete(address);
             }
-            
+
           } catch (error) {
             console.error('Failed to authenticate wallet:', error);
             authenticatingAddresses.delete(address);
             setError('Failed to authenticate wallet. Please try again.');
             throw error;
           } finally {
-            // Promise 완료 후 캐시에서 제거
+            // Remove from cache after Promise completion
             authenticationPromises.delete(address);
           }
         })();
-        
-        // Promise를 캐시에 저장
+
+        // Store Promise in cache
         authenticationPromises.set(address, authPromise);
-        
+
         try {
           await authPromise;
           fetchBalance();
         } catch (error) {
-          // 에러는 이미 authPromise 내부에서 처리됨
+          // Error already handled inside authPromise
         }
-        
+
       } else if (!connected) {
         setProfile(null);
         setBalance(null);
         setError(null);
         setAuthToken(null);
-        // 연결 해제 시 토큰 제거
+        // Remove token on disconnect
         localStorage.removeItem('authToken');
-        // 연결 해제 시 인증 진행 중 상태만 정리
+        // Clean up only authentication in-progress state on disconnect
         if (address) {
           authenticatingAddresses.delete(address);
           authenticationPromises.delete(address);
-          // completedAddresses는 유지하여 재연결 시 기존 인증 상태 활용
+          // Keep completedAddresses to utilize existing auth state on reconnect
         }
       }
       };
-      
+
       handleWalletConnect();
-    }, 100); // 100ms 디바운싱
-    
-    // 클린업 함수
+    }, 100); // 100ms debouncing
+
+    // Cleanup function
     return () => {
       if (walletConnectDebounceTimer) {
         clearTimeout(walletConnectDebounceTimer);
       }
     };
   }, [connected, address, checkExistingAuth, authenticateWallet, loadProfile, fetchBalance]);
-  
+
   return {
-    // 연결 상태
+    // Connection state
     isConnected: connected,
     isConnecting: connecting,
     isDisconnecting: disconnecting,
-    
-    // 지갑 정보
+
+    // Wallet info
     address,
     publicKey,
     wallet,
     wallets,
-    
-    // 프로필 정보
+
+    // Profile info
     profile,
     nickname,
     avatar,
     isLoadingProfile,
     authToken,
-    
-    // 잔고 정보
+
+    // Balance info
     balance,
     isLoadingBalance,
-    
-    // 에러 상태
+
+    // Error state
     error,
-    
-    // 액션
+
+    // Actions
     connectWallet,
     disconnectWallet,
     updateProfile,
     fetchBalance,
     clearError,
     select,
-    
-    // 서명 함수들
+
+    // Signing functions
     signMessage,
     signTransaction,
     sendTransaction,
-    
-    // 모달 제어
+
+    // Modal control
     setVisible
   };
 }

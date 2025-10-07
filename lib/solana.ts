@@ -1,56 +1,53 @@
 import { Connection, PublicKey, LAMPORTS_PER_SOL, Commitment } from '@solana/web3.js';
 
-// 솔라나 네트워크 타입 정의
+// Solana network type definition
 export type SolanaNetwork = 'mainnet' | 'devnet' | 'testnet';
 
-// ⚡ 사용자 지정 RPC URL을 우선 사용하고, 백업으로 무료 RPC 엔드포인트 사용
 const getMainnetRpcEndpoints = () => {
   const customRpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
   const baseEndpoints = [
     'https://mainnet.helius-rpc.com/?api-key=***REMOVED_HELIUS_KEY***', // Helius dedicated RPC
-    'https://solana-mainnet.g.alchemy.com/v2/***REMOVED_ALCHEMY_KEY***', // Alchemy RPC (우선)
+    'https://solana-mainnet.g.alchemy.com/v2/***REMOVED_ALCHEMY_KEY***', // Alchemy RPC (priority)
     'https://rpc.ankr.com/solana', // Ankr
     'https://mainnet.rpcpool.com', // RPC Pool
-    'https://api.mainnet-beta.solana.com', // 공식 RPC (백업용)
-    'https://solana-api.projectserum.com', // Project Serum (무료)
-    'https://api.metaplex.solana.com', // Metaplex (무료)
-    'https://rpc.public.solana.com', // 공개 RPC
-    'https://solana-mainnet.core.chainstack.com', // Chainstack 무료 티어
+    'https://api.mainnet-beta.solana.com', // Official RPC (backup)
+    'https://solana-api.projectserum.com', // Project Serum (free)
+    'https://api.metaplex.solana.com', // Metaplex (free)
+    'https://rpc.public.solana.com', // Public RPC
+    'https://solana-mainnet.core.chainstack.com',
   ];
-  
-  // 사용자 지정 RPC URL이 있으면 가장 앞에 배치 (Alchemy 우선)
+
   return customRpcUrl ? [customRpcUrl, ...baseEndpoints] : baseEndpoints;
 };
 
 const MAINNET_RPC_ENDPOINTS = getMainnetRpcEndpoints();
 
 const DEVNET_RPC_ENDPOINTS = [
-  'https://api.devnet.solana.com', // 공식 Devnet RPC (무료)
-  'https://devnet.solana.com', // 공식 대체 주소
+  'https://api.devnet.solana.com', // Official Devnet RPC (free)
+  'https://devnet.solana.com', // Official alternative URL
 ];
 
 const TESTNET_RPC_ENDPOINTS = [
-  'https://api.testnet.solana.com', // 공식 Testnet RPC
+  'https://api.testnet.solana.com', // Official Testnet RPC
 ];
 
-// 네트워크 설정 (환경 변수 무시하고 강제로 첫 번째 RPC 사용)
 export const NETWORK_CONFIG = {
   mainnet: {
     name: 'Mainnet Beta',
     urls: MAINNET_RPC_ENDPOINTS,
-    url: MAINNET_RPC_ENDPOINTS[0], // 강제로 공식 RPC 사용
+    url: MAINNET_RPC_ENDPOINTS[0],
     commitment: 'confirmed' as Commitment,
   },
   devnet: {
-    name: 'Devnet', 
+    name: 'Devnet',
     urls: DEVNET_RPC_ENDPOINTS,
-    url: DEVNET_RPC_ENDPOINTS[0], // 강제로 공식 RPC 사용
+    url: DEVNET_RPC_ENDPOINTS[0],
     commitment: 'confirmed' as Commitment,
   },
   testnet: {
     name: 'Testnet',
     urls: TESTNET_RPC_ENDPOINTS,
-    url: TESTNET_RPC_ENDPOINTS[0], // 강제로 공식 RPC 사용
+    url: TESTNET_RPC_ENDPOINTS[0],
     commitment: 'confirmed' as Commitment,
   },
 } as const;
@@ -60,35 +57,35 @@ export const MEMO_PROGRAM_ID = new PublicKey(
   'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
 );
 
-// 현재 네트워크 가져오기 (기본값: mainnet)
+// Get current network (default: mainnet)
 export function getCurrentNetwork(): SolanaNetwork {
   const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK as SolanaNetwork;
   if (!network || !['mainnet', 'devnet', 'testnet'].includes(network)) {
-    return 'mainnet'; // devnet 대신 mainnet 기본값으로 변경
+    return 'mainnet';
   }
   return network;
 }
 
-// 🚀 개선된 Connection 생성 (백업 전략 포함)
+// Enhanced Connection creation with backup strategy
 export function createSolanaConnection(network?: SolanaNetwork): Connection {
   const currentNetwork = network || getCurrentNetwork();
   
   let endpoint: string;
   
   if (typeof window !== 'undefined') {
-    // 브라우저 환경: 프록시 우선, 실패 시 직접 연결
+    // Browser environment: prioritize proxy, fallback to direct connection
     endpoint = `${window.location.origin}/api/solana-rpc`;
   } else {
-    // 서버 환경: 직접 연결
+    // Server environment: direct connection
     const config = NETWORK_CONFIG[currentNetwork];
     endpoint = config.url;
   }
-  
-  // 단순한 Connection 생성
+
+  // Create simple Connection
   return new Connection(endpoint, {
     commitment: 'confirmed',
-    confirmTransactionInitialTimeout: 90000, // 90초로 증가
-    disableRetryOnRateLimit: true, // 속도 제한 재시도 비활성화
+    confirmTransactionInitialTimeout: 90000, // Increased to 90 seconds
+    disableRetryOnRateLimit: true, // Disable retry on rate limit
     httpHeaders: {
       'User-Agent': 'SolanaSwapChat/1.0',
     },
@@ -96,7 +93,7 @@ export function createSolanaConnection(network?: SolanaNetwork): Connection {
   });
 }
 
-// 🎯 백업 Connection 생성 (프록시 실패 시 직접 연결)
+// Create backup Connection (direct connection on proxy failure)
 export function createDirectConnection(network?: SolanaNetwork): Connection {
   const currentNetwork = network || getCurrentNetwork();
   const config = NETWORK_CONFIG[currentNetwork];
@@ -112,7 +109,7 @@ export function createDirectConnection(network?: SolanaNetwork): Connection {
   });
 }
 
-// 📦 연결 캐시 시스템
+// Connection cache system
 interface ConnectionCache {
   connection: Connection;
   isHealthy: boolean;
@@ -121,15 +118,15 @@ interface ConnectionCache {
 }
 
 let connectionCache: ConnectionCache | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5분 캐시
-const HEALTH_CHECK_TIMEOUT = 5000; // 5초 타임아웃
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minute cache
+const HEALTH_CHECK_TIMEOUT = 5000; // 5 second timeout
 
-// 🚀 안정적인 Connection 가져오기 (캐싱 + 자동 백업)
+// Get stable Connection with caching and automatic backup
 export async function getStableConnection(network?: SolanaNetwork): Promise<Connection> {
   const currentNetwork = network || getCurrentNetwork();
   const now = Date.now();
-  
-  // 캐시된 연결이 유효한지 확인
+
+  // Check if cached connection is valid
   if (connectionCache && 
       connectionCache.network === currentNetwork && 
       connectionCache.isHealthy && 
@@ -138,18 +135,18 @@ export async function getStableConnection(network?: SolanaNetwork): Promise<Conn
   }
   
   try {
-    // 1차: 프록시 연결 시도
+    // First attempt: proxy connection
     const proxyConnection = createSolanaConnection(currentNetwork);
-    
-    // 빠른 연결 테스트 (타임아웃 적용)
+
+    // Quick connection test with timeout
     const healthCheckPromise = proxyConnection.getSlot();
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Health check timeout')), HEALTH_CHECK_TIMEOUT)
     );
-    
+
     await Promise.race([healthCheckPromise, timeoutPromise]);
-    
-    // 연결 성공 - 캐시에 저장
+
+    // Connection successful - save to cache
     connectionCache = {
       connection: proxyConnection,
       isHealthy: true,
@@ -160,20 +157,20 @@ export async function getStableConnection(network?: SolanaNetwork): Promise<Conn
     return proxyConnection;
     
   } catch {
-    
+
     try {
-      // 2차: 직접 연결 시도
+      // Second attempt: direct connection
       const directConnection = createDirectConnection(currentNetwork);
-      
-      // 빠른 연결 테스트
+
+      // Quick connection test
       const healthCheckPromise = directConnection.getSlot();
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Direct health check timeout')), HEALTH_CHECK_TIMEOUT)
       );
-      
+
       await Promise.race([healthCheckPromise, timeoutPromise]);
-      
-      // 직접 연결 성공 - 캐시에 저장
+
+      // Direct connection successful - save to cache
       connectionCache = {
         connection: directConnection,
         isHealthy: true,
@@ -184,60 +181,60 @@ export async function getStableConnection(network?: SolanaNetwork): Promise<Conn
       return directConnection;
       
     } catch {
-      
-      // 캐시 무효화
+
+      // Invalidate cache
       const oldCache = connectionCache;
       connectionCache = null;
-      
-      // 기존 연결이라도 반환 (최후의 수단)
+
+      // Return existing connection if available (last resort)
       if (oldCache?.connection) {
         return oldCache.connection;
       }
-      
-      throw new Error('Solana 네트워크에 연결할 수 없습니다');
+
+      throw new Error('Unable to connect to Solana network');
     }
   }
 }
 
-// 🎯 블록해시 전용 안정적인 Connection (에러 시 즉시 백업 전환)
+// Stable Connection for blockhash retrieval (immediate fallback on error)
 export async function getBlockhashConnection(network?: SolanaNetwork): Promise<Connection> {
   const currentNetwork = network || getCurrentNetwork();
-  
-  // 1차: 프록시 연결 시도
+
+  // First attempt: proxy connection
   try {
     const proxyConnection = createSolanaConnection(currentNetwork);
-    
-    // 블록해시 테스트
+
+    // Test blockhash retrieval
     await proxyConnection.getLatestBlockhash('finalized');
     return proxyConnection;
-    
+
   } catch {
-    
-    // 2차: 직접 연결 시도
+
+    // Second attempt: direct connection
     try {
       const directConnection = createDirectConnection(currentNetwork);
-      
-      // 블록해시 테스트
+
+      // Test blockhash retrieval
       await directConnection.getLatestBlockhash('finalized');
       return directConnection;
-      
+
     } catch (directError) {
-      throw new Error(`블록해시 조회 불가: ${directError instanceof Error ? directError.message : String(directError)}`);
+      throw new Error(`Unable to fetch blockhash: ${directError instanceof Error ? directError.message : String(directError)}`);
     }
   }
 }
 
-// 캐시 무효화 함수 (문제 발생 시 사용)
+// Invalidate connection cache (use when issues occur)
 export function invalidateConnectionCache(): void {
   connectionCache = null;
 }
 
-// RPC 엔드포인트 자동 선택 (이제 프록시에서 처리되므로 단순화)
+// Automatic RPC endpoint selection (simplified as it's now handled by proxy)
 export async function findHealthyRpcEndpoint(): Promise<string | null> {
   return '/api/solana-rpc';
 }
 
-// 네트워크 통계 정보
+// Network statistics information
 export async function getNetworkStats(conn?: Connection) {
   try {
     const solanaConnection = conn || getSolanaConnection();
@@ -261,7 +258,7 @@ export async function getNetworkStats(conn?: Connection) {
   }
 }
 
-// 연결 상태 모니터링
+// Connection status monitoring
 export class SolanaConnectionMonitor {
   private connection: Connection;
   private isMonitoring = false;
@@ -274,7 +271,7 @@ export class SolanaConnectionMonitor {
   startMonitoring(onStatusChange: (status: { connected: boolean; error?: string }) => void) {
     this.onStatusChange = onStatusChange;
     this.isMonitoring = true;
-    // 초기 상태만 확인 (자동 반복 제거)
+    // Check initial status only (auto-repeat removed)
     this.checkStatus();
   }
 
@@ -283,7 +280,7 @@ export class SolanaConnectionMonitor {
     this.onStatusChange = undefined;
   }
 
-  // 🎯 수동 상태 확인 메서드 추가
+  // Manual status check method
   async checkStatusManually() {
     if (!this.isMonitoring) return;
     await this.checkStatus();
@@ -302,12 +299,12 @@ export class SolanaConnectionMonitor {
       });
     }
 
-    // 🚫 자동 폴링 제거 - 필요할 때만 수동으로 호출
+    // Auto-polling removed - call manually when needed
     // setTimeout(() => this.checkStatus(), 30000);
   }
 }
 
-// 기본 Connection 인스턴스 (싱글톤)
+// Default Connection instance (singleton)
 let connection: Connection | null = null;
 
 export function getSolanaConnection(): Connection {
@@ -317,13 +314,13 @@ export function getSolanaConnection(): Connection {
   return connection;
 }
 
-// 네트워크 전환
+// Network switching
 export function switchNetwork(network: SolanaNetwork): Connection {
   connection = createSolanaConnection(network);
   return connection;
 }
 
-// Solana 연결 상태 확인
+// Check Solana connection status
 export async function checkSolanaConnection(conn?: Connection): Promise<{
   connected: boolean;
   network: string;
@@ -332,9 +329,9 @@ export async function checkSolanaConnection(conn?: Connection): Promise<{
 }> {
   const currentNetwork = getCurrentNetwork();
   const solanaConnection = conn || getSolanaConnection();
-  
+
   try {
-    // 빠른 건강성 체크 (3초 타임아웃)
+    // Quick health check (3 second timeout)
     const healthPromise = solanaConnection.getSlot();
     const timeoutPromise = new Promise<never>((_, reject) => 
       setTimeout(() => reject(new Error('Connection timeout')), 3000)
@@ -358,7 +355,7 @@ export async function checkSolanaConnection(conn?: Connection): Promise<{
   }
 }
 
-// 계정 잔고 조회 (SOL)
+// Get account balance (SOL)
 export async function getAccountBalance(
   publicKey: PublicKey,
   conn?: Connection
@@ -372,7 +369,7 @@ export async function getAccountBalance(
   }
 }
 
-// 계정 정보 조회
+// Get account info
 export async function getAccountInfo(
   publicKey: PublicKey,
   conn?: Connection
@@ -386,7 +383,7 @@ export async function getAccountInfo(
   }
 }
 
-// 최신 블록해시 조회
+// Get latest blockhash
 export async function getLatestBlockhash(conn?: Connection) {
   try {
     const solanaConnection = conn || getSolanaConnection();
@@ -397,7 +394,7 @@ export async function getLatestBlockhash(conn?: Connection) {
   }
 }
 
-// 트랜잭션 확인
+// Confirm transaction
 export async function confirmTransaction(
   signature: string,
   conn?: Connection

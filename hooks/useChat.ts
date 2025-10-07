@@ -9,11 +9,11 @@ export function useChat() {
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // WebSocket 연결은 useChatMessages에서 관리
+
+  // WebSocket connection is managed by useChatMessages
   const ws = useRef<WebSocket | null>(null);
 
-  // 채팅방 목록 조회
+  // Fetch chat room list
   const fetchRooms = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -21,9 +21,9 @@ export function useChat() {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001'}/api/chat/rooms`);
       const result = await response.json();
-      
+
       if (result.success) {
-        // 서버 데이터를 클라이언트 형식으로 변환
+        // Convert server data to client format
         const formattedRooms: ChatRoom[] = result.data.map((room: any) => ({
           id: room.id,
           name: room.name,
@@ -47,36 +47,36 @@ export function useChat() {
         }));
 
         setRooms(formattedRooms);
-        
-        // 기본 선택 채팅방 설정 (기존 UI 호환성)
+
+        // Set default selected chat room (for UI compatibility)
         if (formattedRooms.length > 0 && !activeRoomId) {
           const defaultRoom = formattedRooms.find(r => r.name === 'SOL/USDC') || formattedRooms[0];
-          const roomKey = defaultRoom.name === 'SOL/USDC' ? 'sol-usdc' : 
-                          defaultRoom.name === 'BTC Discussion' ? 'btc-chat' : 
+          const roomKey = defaultRoom.name === 'SOL/USDC' ? 'sol-usdc' :
+                          defaultRoom.name === 'BTC Discussion' ? 'btc-chat' :
                           'general';
           setActiveRoomId(roomKey);
         }
       } else {
-        setError('채팅방 목록을 가져오는데 실패했습니다.');
+        setError('Failed to fetch chat room list.');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '채팅방 목록을 가져오는데 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to fetch chat room list.');
     } finally {
       setIsLoading(false);
     }
   }, [activeRoomId]);
 
-  // 특정 채팅방 메시지 조회 (useChatMessages에서 관리하므로 간소화)
+  // Fetch chat room messages (simplified as managed by useChatMessages)
   const fetchMessages = useCallback(async (roomId: string, page = 1) => {
-    // useChatMessages에서 직접 관리하므로 여기서는 처리하지 않음
+    // Managed directly by useChatMessages, not handled here
   }, []);
 
-  // 메시지 전송 (useChatMessages에서 관리)
+  // Send message (managed by useChatMessages)
   const sendMessage = useCallback(async (roomId: string, content: string, tradeType: 'buy' | 'sell', tradeAmount?: string) => {
-    // useChatMessages에서 직접 관리하므로 여기서는 처리하지 않음
+    // Managed directly by useChatMessages, not handled here
   }, []);
 
-  // 채팅방 생성
+  // Create chat room
   const createRoom = useCallback(async (name: string, description?: string, tokenAddress?: string) => {
     setIsLoading(true);
     setError(null);
@@ -91,12 +91,12 @@ export function useChat() {
           name,
           description,
           token_address: tokenAddress,
-          created_by: 'current-user', // 실제로는 인증된 사용자 ID
+          created_by: 'current-user', // In practice, use authenticated user ID
         }),
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         const newRoom: ChatRoom = {
           id: result.data.id,
@@ -113,41 +113,41 @@ export function useChat() {
 
         setRooms(prev => [...prev, newRoom]);
         setActiveRoomId(newRoom.id);
-        
+
         return newRoom;
       } else {
-        throw new Error(result.error || '채팅방 생성에 실패했습니다.');
+        throw new Error(result.error || 'Failed to create chat room.');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '채팅방 생성에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to create chat room.');
       throw err;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // 채팅방 검색
+  // Search chat rooms
   const searchRooms = useCallback(async (query: string) => {
     if (!query.trim()) return rooms;
 
     try {
-      // 로컬 필터링 (실제로는 서버 검색 API 사용)
-      return rooms.filter(room => 
+      // Local filtering (in practice, use server search API)
+      return rooms.filter(room =>
         room.name.toLowerCase().includes(query.toLowerCase()) ||
         room.description?.toLowerCase().includes(query.toLowerCase())
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : '채팅방 검색에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to search chat rooms.');
       return [];
     }
   }, [rooms]);
 
-  // WebSocket 연결 설정 (useChatMessages에서 관리하므로 비활성화)
+  // WebSocket connection setup (disabled as managed by useChatMessages)
   const connectWebSocket = useCallback(() => {
-    // Socket.IO는 useChatMessages에서 관리
+    // Socket.IO is managed by useChatMessages
   }, []);
 
-  // 컴포넌트 마운트 시 초기 데이터 로드
+  // Load initial data on component mount
   useEffect(() => {
     fetchRooms();
     connectWebSocket();
@@ -157,10 +157,10 @@ export function useChat() {
     };
   }, [fetchRooms, connectWebSocket]);
 
-  // 활성 채팅방 변경 시 메시지 로드 (useChatMessages에서 관리)
+  // Load messages when active chat room changes (managed by useChatMessages)
   useEffect(() => {
     if (activeRoomId && !messages[activeRoomId]) {
-      // useChatMessages에서 자동으로 처리됨
+      // Automatically handled by useChatMessages
     }
   }, [activeRoomId, messages]);
 
@@ -168,9 +168,9 @@ export function useChat() {
     rooms,
     activeRoomId,
     activeRoom: rooms.find(room => {
-      // roomId 매핑 (기존 UI 호환성)
-      const roomKey = room.name === 'SOL/USDC' ? 'sol-usdc' : 
-                      room.name === 'BTC Discussion' ? 'btc-chat' : 
+      // roomId mapping (for UI compatibility)
+      const roomKey = room.name === 'SOL/USDC' ? 'sol-usdc' :
+                      room.name === 'BTC Discussion' ? 'btc-chat' :
                       'general';
       return roomKey === activeRoomId;
     }),

@@ -2,8 +2,7 @@ const { Connection, clusterApiUrl } = require('@solana/web3.js');
 
 async function checkRPC() {
   console.log('=== RPC Connection Check ===\n');
-  
-  // Check environment variables
+
   console.log('Environment Variables:');
   console.log('NEXT_PUBLIC_RPC_URL:', process.env.NEXT_PUBLIC_RPC_URL || 'Not set');
   console.log('NEXT_PUBLIC_SOLANA_RPC_URL:', process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'Not set');
@@ -27,8 +26,7 @@ async function checkRPC() {
     try {
       const start = Date.now();
       const connection = new Connection(endpoint.url, 'confirmed');
-      
-      // Test connection with getVersion
+
       const version = await connection.getVersion();
       const latency = Date.now() - start;
       
@@ -37,8 +35,7 @@ async function checkRPC() {
       console.log(`   Status: Connected`);
       console.log(`   Version: ${version['solana-core']}`);
       console.log(`   Latency: ${latency}ms`);
-      
-      // Test balance fetch capability
+
       try {
         const { PublicKey } = require('@solana/web3.js');
         const testPubkey = new PublicKey('So11111111111111111111111111111111111111112'); // System program
@@ -58,11 +55,9 @@ async function checkRPC() {
   }
 }
 
-// Load .env.local if exists
 try {
   require('dotenv').config({ path: '.env.local' });
 } catch (e) {
-  // ignore
 }
 
 checkRPC().catch(console.error);

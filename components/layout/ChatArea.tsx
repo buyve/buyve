@@ -41,8 +41,7 @@ export default function ChatArea() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Chat message hooks
+
   const { messages } = useChatMessages(selectedRoom);
 
   // Fetch real-time price data
@@ -68,59 +67,49 @@ export default function ChatArea() {
           setPriceChange(result.data.priceChange);
         }
       } catch {
-        // Ignore errors
       }
     };
 
-    // Initial fetch
     fetchRealtimePrice();
 
-    // Update every minute
     const interval = setInterval(fetchRealtimePrice, 60 * 1000);
 
     return () => clearInterval(interval);
   }, [selectedRoom]);
 
-
-
-      // Check if popup mode via URL parameter
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const popup = urlParams.get('popup') === 'true';
     const roomParam = urlParams.get('room');
-    
+
+
     setIsPopupMode(popup);
-    
-          // If popup mode and specific room is specified
+
     if (popup && roomParam) {
       setPopupRoomId(roomParam);
     }
-      }, []); // Keep dependency array empty to execute only on mount
+  }, []);
 
-      // Load actual chatroom data
   const loadChatrooms = useCallback(async () => {
     try {
       const response = await fetch('/api/chatrooms');
       const data = await response.json();
 
       if (data.success && data.chatrooms) {
-                  // Convert API data to UI format
         const formattedRooms: ChatRoom[] = data.chatrooms.map((room: ApiChatRoom) => ({
           id: room.contractAddress,
           name: room.name,
-                      image: room.image || '🪙', // Token image URL or default emoji
+          image: room.image || '🪙',
           contractAddress: room.contractAddress
         }));
 
         setChatRooms(formattedRooms);
-        
-                  // If popup mode and specific room exists
+
         if (isPopupMode && popupRoomId) {
           const targetRoom = formattedRooms.find(room => room.contractAddress === popupRoomId);
           if (targetRoom) {
             setSelectedRoom(targetRoom.id);
-            
-            // Token pair change event
+
             window.dispatchEvent(new CustomEvent('tokenPairChanged', {
               detail: { 
                 contractAddress: targetRoom.contractAddress,
@@ -129,13 +118,10 @@ export default function ChatArea() {
             }));
           } else {
           }
-        } 
-        // Set default selected chatroom only when not in popup mode
-        else if (!isPopupMode && formattedRooms.length > 0 && !selectedRoom) {
+        } else if (!isPopupMode && formattedRooms.length > 0 && !selectedRoom) {
           const firstRoom = formattedRooms[0];
           setSelectedRoom(firstRoom.id);
-          
-          // Token pair change event
+
           window.dispatchEvent(new CustomEvent('tokenPairChanged', {
             detail: { 
               contractAddress: firstRoom.contractAddress,
@@ -151,17 +137,14 @@ export default function ChatArea() {
     }
   }, [selectedRoom, isPopupMode, popupRoomId]);
 
-  // Load data on component mount
   useEffect(() => {
     loadChatrooms();
   }, [loadChatrooms]);
 
-  // New chatroom creation event listener
   useEffect(() => {
     const handleChatroomCreated = (event: CustomEvent) => {
-      loadChatrooms(); // Refresh list when new chatroom is created
-      
-      // Auto-switch to newly created chatroom only when not in popup mode
+      loadChatrooms();
+
       if (!isPopupMode && event.detail?.chatroom?.contractAddress) {
         setSelectedRoom(event.detail.chatroom.contractAddress);
         window.dispatchEvent(new CustomEvent('tokenPairChanged', {
@@ -177,17 +160,14 @@ export default function ChatArea() {
     return () => window.removeEventListener('chatroomCreated', handleChatroomCreated as EventListener);
   }, [loadChatrooms, isPopupMode]);
 
-  // Handle chatroom selection events from external sources
   useEffect(() => {
     const handleRoomSelected = (event: CustomEvent) => {
-      // Ignore room changes in popup mode
       if (isPopupMode) return;
       
       const { roomId } = event.detail;
       if (roomId && roomId !== selectedRoom) {
         setSelectedRoom(roomId);
-        
-        // Token pair change event
+
         const room = chatRooms.find(r => r.id === roomId);
         if (room) {
           window.dispatchEvent(new CustomEvent('tokenPairChanged', {
@@ -204,16 +184,12 @@ export default function ChatArea() {
     return () => window.removeEventListener('roomSelected', handleRoomSelected as EventListener);
   }, [selectedRoom, chatRooms, isPopupMode]);
 
-  // Message scroll management
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
-  // Message sending is handled directly by ChatInput, so removed
-
-  // Clipboard copy function
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -223,13 +199,12 @@ export default function ChatArea() {
     }
   };
 
-  // Render chatroom information
   const renderChatRoomInfo = () => {
     const currentRoom = chatRooms.find(room => room.id === selectedRoom);
-    
+
+
     if (!currentRoom) return null;
 
-    // 팝업 모드에서는 헤더를 숨겨 말풍선만 노출
     if (isPopupMode) {
       return null;
     }
@@ -258,7 +233,6 @@ export default function ChatArea() {
             </div>
           </div>
         </div>
-        {/* 모바일에서만 표시되는 가격 정보 - 팝업 버튼 왼쪽 */}
         <div className="flex items-center space-x-3 lg:hidden">
           {currentPrice > 0 && (
             <div className="flex flex-col items-end">
@@ -273,9 +247,10 @@ export default function ChatArea() {
             </div>
           )}
         </div>
-        
+
+
         <div className="flex items-center space-x-2">
-                      <button 
+          <button
               onClick={() => {
                 const baseUrl = window.location.origin;
                 const popupUrl = `${baseUrl}/trade?popup=true&room=${currentRoom.contractAddress}`;
@@ -299,7 +274,6 @@ export default function ChatArea() {
     );
   };
 
-  // Render chat message area
   const renderChatMessages = () => {
     if (!selectedRoom) {
       return (
@@ -330,7 +304,7 @@ export default function ChatArea() {
         <div>
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-500">
-                              <span>No messages yet. Send the first message!</span>
+              <span>No messages yet. Send the first message!</span>
             </div>
           ) : (
             messages.map((message) => (
@@ -343,9 +317,7 @@ export default function ChatArea() {
     );
   };
 
-  // Chat input area
   const renderChatInput = () => {
-    // Remove input area in popup mode (for OBS browser source)
     if (isPopupMode) {
       return null;
     }
@@ -359,15 +331,12 @@ export default function ChatArea() {
     );
   };
 
-      // When in popup mode
   if (isPopupMode) {
     return (
       <div className="h-screen w-screen bg-transparent">
         <div className="flex flex-col h-full bg-[oklch(23.93%_0_0)] backdrop-blur-sm overflow-hidden">
-          {/* Chatroom info - simplified */}
           {renderChatRoomInfo()}
-          
-          {/* Chat messages - style adjusted */}
+
           <div 
             className={cn(
               "flex-1 overflow-y-scroll p-3 space-y-2",
@@ -403,16 +372,12 @@ export default function ChatArea() {
     );
   }
 
-      // Normal mode
   return (
     <div className="flex flex-col h-full flex-1 bg-[oklch(23.93%_0_0)] border-2 border-black rounded-base overflow-hidden" style={{ boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)' }}>
-              {/* Chatroom info */}
       {renderChatRoomInfo()}
-      
-              {/* Chat messages */}
+
       {renderChatMessages()}
-      
-              {/* Chat input */}
+
       {renderChatInput()}
     </div>
   );
