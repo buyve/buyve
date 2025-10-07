@@ -3,24 +3,24 @@
 import { Connection, Transaction, TransactionInstruction, PublicKey, SendOptions } from '@solana/web3.js';
 import { MEMO_PROGRAM_ID } from './solana';
 
-// 지원하는 프로토콜 타입
-export type SupportedProtocol = 
-  | 'PUMP' 
-  | 'LAUNCHLAB' 
-  | 'LAUNCH_A_COIN' 
-  | 'BOOP' 
-  | 'MOONSHOT' 
-  | 'RAYDIUM' 
-  | 'PUMP_AMM' 
-  | 'METEORA_AMM' 
-  | 'METEORA_AMM_V2' 
-  | 'BONK' 
+// Supported protocol types
+export type SupportedProtocol =
+  | 'PUMP'
+  | 'LAUNCHLAB'
+  | 'LAUNCH_A_COIN'
+  | 'BOOP'
+  | 'MOONSHOT'
+  | 'RAYDIUM'
+  | 'PUMP_AMM'
+  | 'METEORA_AMM'
+  | 'METEORA_AMM_V2'
+  | 'BONK'
   | 'DYNAMIC_BC';
 
-// 메시지 타입
+// Message type
 export type MessageType = 'BUY' | 'SELL' | 'CHAT';
 
-// 메모 메시지 인터페이스
+// Memo message interface
 export interface MemoMessage {
   type: MessageType;
   tokenSymbol?: string;
@@ -31,7 +31,7 @@ export interface MemoMessage {
   timestamp: Date;
 }
 
-// 메모 트랜잭션 옵션
+// Memo transaction options
 export interface MemoTransactionOptions {
   message: string;
   protocol?: SupportedProtocol;
@@ -40,7 +40,7 @@ export interface MemoTransactionOptions {
   sendOptions?: SendOptions;
 }
 
-// 트랜잭션 결과
+// Transaction result
 export interface MemoTransactionResult {
   signature: string;
   message: string;
@@ -49,7 +49,7 @@ export interface MemoTransactionResult {
   blockTime?: number;
 }
 
-// 지원 프로토콜 목록
+// Supported protocol list
 export const SUPPORTED_PROTOCOLS: Record<SupportedProtocol, string> = {
   PUMP: 'Pump',
   LAUNCHLAB: 'LaunchLab',
@@ -65,14 +65,14 @@ export const SUPPORTED_PROTOCOLS: Record<SupportedProtocol, string> = {
 };
 
 /**
- * 메모 메시지 포맷 생성
- * @param type 메시지 타입 (BUY/SELL/CHAT)
- * @param content 메시지 내용
- * @param tokenSymbol 토큰 심볼 (선택적)
- * @param quantity 수량 (선택적)
- * @param price 가격 (선택적)
- * @param protocol 프로토콜 (선택적)
- * @returns 포맷된 메모 문자열
+ * Create memo message format
+ * @param type Message type (BUY/SELL/CHAT)
+ * @param content Message content
+ * @param tokenSymbol Token symbol (optional)
+ * @param quantity Quantity (optional)
+ * @param price Price (optional)
+ * @param protocol Protocol (optional)
+ * @returns Formatted memo string
  */
 export function formatMemoMessage(
   type: MessageType,
@@ -86,7 +86,7 @@ export function formatMemoMessage(
     return content;
   }
 
-  // 거래 메시지 포맷: BUY:SOL:100@1.5:RAYDIUM 또는 BUY:SOL:100@1.5
+  // Trade message format: BUY:SOL:100@1.5:RAYDIUM or BUY:SOL:100@1.5
   let message = `${type}:${tokenSymbol || 'UNKNOWN'}`;
   
   if (quantity !== undefined && price !== undefined) {
@@ -101,14 +101,14 @@ export function formatMemoMessage(
 }
 
 /**
- * 메모 메시지 파싱
- * @param memoText 메모 텍스트
- * @returns 파싱된 메모 메시지
+ * Parse memo message
+ * @param memoText Memo text
+ * @returns Parsed memo message
  */
 export function parseMemoMessage(memoText: string): MemoMessage {
   const timestamp = new Date();
-  
-  // CHAT 메시지인지 확인 (BUY/SELL로 시작하지 않는 경우)
+
+  // Check if it's a CHAT message (not starting with BUY/SELL)
   if (!memoText.startsWith('BUY:') && !memoText.startsWith('SELL:')) {
     return {
       type: 'CHAT',
@@ -117,7 +117,7 @@ export function parseMemoMessage(memoText: string): MemoMessage {
     };
   }
 
-  // 거래 메시지 파싱: BUY:SOL:100@1.5:RAYDIUM
+  // Parse trade message: BUY:SOL:100@1.5:RAYDIUM
   const parts = memoText.split(':');
   
   if (parts.length < 2) {
@@ -135,14 +135,14 @@ export function parseMemoMessage(memoText: string): MemoMessage {
   let price: number | undefined;
   let protocol: SupportedProtocol | undefined;
 
-  // 수량과 가격 파싱 (100@1.5 형태)
+  // Parse quantity and price (format: 100@1.5)
   if (parts.length >= 3 && parts[2].includes('@')) {
     const [quantityStr, priceStr] = parts[2].split('@');
     quantity = parseFloat(quantityStr);
     price = parseFloat(priceStr);
   }
 
-  // 프로토콜 파싱
+  // Parse protocol
   if (parts.length >= 4 && parts[3] in SUPPORTED_PROTOCOLS) {
     protocol = parts[3] as SupportedProtocol;
   }
@@ -159,33 +159,33 @@ export function parseMemoMessage(memoText: string): MemoMessage {
 }
 
 /**
- * 메모 트랜잭션 생성
- * @param message 메모 메시지
- * @param feePayer 수수료 지불자 주소
- * @returns 메모 트랜잭션
+ * Create memo transaction
+ * @param message Memo message
+ * @param feePayer Fee payer address
+ * @returns Memo transaction
  */
 export function createMemoTransaction(message: string, feePayer: PublicKey): Transaction {
   const transaction = new Transaction();
-  
-  // 메모 인스트럭션 생성
+
+  // Create memo instruction
   const memoInstruction = new TransactionInstruction({
     keys: [],
     programId: MEMO_PROGRAM_ID,
     data: Buffer.from(message, 'utf8'),
   });
-  
+
   transaction.add(memoInstruction);
   transaction.feePayer = feePayer;
-  
+
   return transaction;
 }
 
 /**
- * 메모 트랜잭션 전송
- * @param connection Solana 연결 객체
- * @param transaction 서명된 트랜잭션
- * @param options 전송 옵션
- * @returns 트랜잭션 서명
+ * Send memo transaction
+ * @param connection Solana connection object
+ * @param transaction Signed transaction
+ * @param options Send options
+ * @returns Transaction signature
  */
 export async function sendMemoTransaction(
   connection: Connection,
@@ -198,23 +198,23 @@ export async function sendMemoTransaction(
     ...options,
   });
 
-  // 트랜잭션 확인 대기
+  // Wait for transaction confirmation
   const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-  
+
   if (confirmation.value.err) {
-    throw new Error(`메모 트랜잭션 실패: ${confirmation.value.err}`);
+    throw new Error(`Memo transaction failed: ${confirmation.value.err}`);
   }
 
   return signature;
 }
 
 /**
- * 재시도 메커니즘이 포함된 메모 트랜잭션 전송
- * @param connection Solana 연결 객체
- * @param transaction 서명된 트랜잭션
- * @param maxRetries 최대 재시도 횟수
- * @param retryDelay 재시도 간격 (ms)
- * @returns 트랜잭션 서명
+ * Send memo transaction with retry mechanism
+ * @param connection Solana connection object
+ * @param transaction Signed transaction
+ * @param maxRetries Maximum number of retries
+ * @param retryDelay Retry interval (ms)
+ * @returns Transaction signature
  */
 export async function sendMemoTransactionWithRetry(
   connection: Connection,
@@ -229,23 +229,23 @@ export async function sendMemoTransactionWithRetry(
       const signature = await sendMemoTransaction(connection, transaction);
       return signature;
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error('알 수 없는 오류');
-      
-      // 마지막 시도가 아니면 잠시 대기
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+
+      // Wait briefly if not the last attempt
       if (attempt < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)));
       }
     }
   }
 
-  throw new Error(`메모 트랜잭션 ${maxRetries + 1}회 시도 모두 실패: ${lastError!.message}`);
+  throw new Error(`All ${maxRetries + 1} memo transaction attempts failed: ${lastError!.message}`);
 }
 
 /**
- * 메모 트랜잭션에서 메시지 추출
- * @param connection Solana 연결 객체
- * @param signature 트랜잭션 서명
- * @returns 메모 메시지 또는 null
+ * Extract message from memo transaction
+ * @param connection Solana connection object
+ * @param signature Transaction signature
+ * @returns Memo message or null
  */
 export async function extractMemoFromTransaction(
   connection: Connection,
@@ -261,7 +261,7 @@ export async function extractMemoFromTransaction(
       return null;
     }
 
-    // 메모 프로그램 인스트럭션 찾기
+    // Find memo program instruction
     const memoInstruction = transaction.transaction.message.compiledInstructions.find(
       instruction => {
         const programId = transaction.transaction.message.staticAccountKeys[instruction.programIdIndex];
@@ -273,7 +273,7 @@ export async function extractMemoFromTransaction(
       return null;
     }
 
-    // 메모 데이터 디코딩
+    // Decode memo data
     const memoData = Buffer.from(memoInstruction.data);
     return memoData.toString('utf8');
   } catch {
@@ -282,27 +282,27 @@ export async function extractMemoFromTransaction(
 }
 
 /**
- * 프로토콜 유효성 검증
- * @param protocol 프로토콜 문자열
- * @returns 유효한 프로토콜 여부
+ * Validate protocol
+ * @param protocol Protocol string
+ * @returns Whether protocol is valid
  */
 export function isValidProtocol(protocol: string): protocol is SupportedProtocol {
   return protocol in SUPPORTED_PROTOCOLS;
 }
 
 /**
- * 메시지 타입 유효성 검증
- * @param type 메시지 타입 문자열
- * @returns 유효한 메시지 타입 여부
+ * Validate message type
+ * @param type Message type string
+ * @returns Whether message type is valid
  */
 export function isValidMessageType(type: string): type is MessageType {
   return ['BUY', 'SELL', 'CHAT'].includes(type);
 }
 
 /**
- * 메모 메시지 유효성 검증
- * @param message 메모 메시지
- * @returns 유효성 검증 결과
+ * Validate memo message
+ * @param message Memo message
+ * @returns Validation result
  */
 export function validateMemoMessage(message: string): {
   isValid: boolean;
@@ -310,34 +310,34 @@ export function validateMemoMessage(message: string): {
   parsed?: MemoMessage;
 } {
   const errors: string[] = [];
-  
+
   if (!message || message.trim().length === 0) {
-    errors.push('메시지가 비어있습니다');
+    errors.push('Message is empty');
     return { isValid: false, errors };
   }
 
-  if (message.length > 566) { // Solana 메모 최대 크기
-    errors.push('메시지가 너무 깁니다 (최대 566바이트)');
+  if (message.length > 566) { // Solana memo maximum size
+    errors.push('Message is too long (maximum 566 bytes)');
   }
 
   try {
     const parsed = parseMemoMessage(message);
-    
+
     if (parsed.type !== 'CHAT') {
       if (!parsed.tokenSymbol) {
-        errors.push('거래 메시지에는 토큰 심볼이 필요합니다');
+        errors.push('Trade message requires token symbol');
       }
-      
+
       if (parsed.quantity !== undefined && (isNaN(parsed.quantity) || parsed.quantity <= 0)) {
-        errors.push('유효하지 않은 수량입니다');
+        errors.push('Invalid quantity');
       }
-      
+
       if (parsed.price !== undefined && (isNaN(parsed.price) || parsed.price <= 0)) {
-        errors.push('유효하지 않은 가격입니다');
+        errors.push('Invalid price');
       }
-      
+
       if (parsed.protocol && !isValidProtocol(parsed.protocol)) {
-        errors.push('지원하지 않는 프로토콜입니다');
+        errors.push('Unsupported protocol');
       }
     }
 
@@ -347,7 +347,7 @@ export function validateMemoMessage(message: string): {
       parsed: errors.length === 0 ? parsed : undefined,
     };
   } catch {
-    errors.push('메시지 파싱 실패');
+    errors.push('Message parsing failed');
     return { isValid: false, errors };
   }
 } 

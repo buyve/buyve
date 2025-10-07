@@ -24,7 +24,6 @@ export function useSupabaseRealtime({
     const channelInstance = supabase.channel(channel);
 
     if (table) {
-      // Database changes
       channelInstance.on(
         'postgres_changes',
         {
@@ -38,7 +37,6 @@ export function useSupabaseRealtime({
         }
       );
     } else {
-      // Broadcast messages
       channelInstance.on('broadcast', { event }, (payload) => {
         onMessage?.(payload);
       });

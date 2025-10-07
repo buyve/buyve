@@ -8,7 +8,7 @@ import {
   PublicKey,
   Connection,
 } from '@solana/web3.js';
-// SPL Token 관련 기능은 별도 구현
+// SPL Token features are implemented separately
 import { getStableConnection } from '@/lib/solana';
 import { jupiterService, JupiterQuote } from '@/lib/jupiter';
 import { TOKENS, formatTokenAmount, getTokenByAddress } from '@/lib/tokens';
@@ -16,7 +16,7 @@ import { safePublicKeyToString, isValidPublicKey } from '@/lib/wallet-utils';
 import { extractMemoFromTransaction } from '@/lib/memo';
 import { confirmTransactionHybrid, createAlchemyConnection, getConfirmationStats } from '@/lib/transaction-confirmation';
 
-// 🎯 수수료 설정 (Jupiter API에서 자동 처리)
+// Fee configuration (automatically handled by Jupiter API)
 const FEE_RECIPIENT_ADDRESS = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
 const FEE_RATE = 0.0069;
 const PLATFORM_FEE_BPS = Math.round(FEE_RATE * 10000);
@@ -50,7 +50,7 @@ function truncateMemoByBytes(memo: string, limit = MEMO_BYTE_LIMIT): string {
   return `${truncated}${ellipsis}`;
 }
 
-// 🎯 메모 인스트럭션 생성 헬퍼 함수
+// Helper function to create memo instruction
 function createMemoInstruction(memo: string, signer: PublicKey): TransactionInstruction {
   const truncatedMemo = truncateMemoByBytes(memo);
 
@@ -61,7 +61,7 @@ function createMemoInstruction(memo: string, signer: PublicKey): TransactionInst
   });
 }
 
-// 🔄 스왑 상태 타입
+// Swap state type
 export interface SwapState {
   loading: boolean;
   error: string | null;
@@ -70,14 +70,14 @@ export interface SwapState {
   signature: string | null;
 }
 
-// 🔄 스왑 결과 타입
+// Swap result type
 export interface SwapResult {
   success: boolean;
   signature?: string;
   error?: string;
 }
 
-// 🌟 스왑 Hook
+// Swap Hook
 export function useSwap() {
   const { publicKey, signTransaction } = useWalletAdapter();
   const [state, setState] = useState<SwapState>({
@@ -88,12 +88,12 @@ export function useSwap() {
     signature: null,
   });
 
-  // 🔄 상태 업데이트 헬퍼
+  // State update helper
   const updateState = useCallback((updates: Partial<SwapState>) => {
     setState(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // 🔍 견적 조회
+  // Get quote
   const getQuote = useCallback(async (
     fromToken: string,
     toToken: string,
@@ -105,21 +105,21 @@ export function useSwap() {
 
     const userPublicKeyString = safePublicKeyToString(publicKey);
     if (!userPublicKeyString) {
-      updateState({ loading: false, error: '지갑 연결을 확인해주세요.' });
+      updateState({ loading: false, error: 'Please check your wallet connection.' });
       return null;
     }
 
     updateState({ loading: true, error: null });
 
     try {
-      // 토큰 정보 가져오기 - 심볼로 찾기
-      const fromTokenInfo = Object.values(TOKENS).find(token => token.symbol === fromToken) || 
+      // Get token info - find by symbol
+      const fromTokenInfo = Object.values(TOKENS).find(token => token.symbol === fromToken) ||
                            getTokenByAddress(fromToken);
-      const toTokenInfo = Object.values(TOKENS).find(token => token.symbol === toToken) || 
+      const toTokenInfo = Object.values(TOKENS).find(token => token.symbol === toToken) ||
                          getTokenByAddress(toToken);
 
       if (!fromTokenInfo || !toTokenInfo) {
-        throw new Error('지원하지 않는 토큰입니다.');
+        throw new Error('Unsupported token.');
       }
 
       const rawAmount = Math.floor(amount * Math.pow(10, fromTokenInfo.decimals));
@@ -135,36 +135,37 @@ export function useSwap() {
       updateState({ quote, loading: false });
 
       return quote;
-      
+
+
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '견적 조회 실패';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get quote';
       updateState({ loading: false, error: errorMessage });
       return null;
     }
   }, [publicKey, updateState]);
 
-  // 🔄 스왑 실행
+  // Execute swap
   const executeSwap = useCallback(async (
     quote: JupiterQuote, 
     memo?: string
   ): Promise<SwapResult> => {
     if (!isValidPublicKey(publicKey)) {
-      return { success: false, error: '지갑이 연결되지 않았습니다.' };
+      return { success: false, error: 'Wallet is not connected.' };
     }
 
     if (!signTransaction) {
-      return { success: false, error: '지갑에서 트랜잭션 서명을 지원하지 않습니다.' };
+      return { success: false, error: 'Wallet does not support transaction signing.' };
     }
 
     const userPublicKeyString = safePublicKeyToString(publicKey);
     if (!userPublicKeyString) {
-      return { success: false, error: '유효하지 않은 PublicKey입니다.' };
+      return { success: false, error: 'Invalid PublicKey.' };
     }
 
     updateState({ loading: true, error: null, signature: null });
 
     try {
-      // 수수료를 Jupiter 플랫폼 기능으로 처리하도록 요청
+      // Request to handle fees through Jupiter platform features
       const swapResponse = await jupiterService.getSwapTransaction(quote, {
         inputMint: quote.inputMint,
         outputMint: quote.outputMint,
@@ -177,84 +178,85 @@ export function useSwap() {
         platformFeeBps: PLATFORM_FEE_BPS,
       });
 
-      // 받은 swapTransaction 디코딩 (Transaction)
+      // Decode received swapTransaction
       const swapTxBuf = Buffer.from(swapResponse.swapTransaction, 'base64');
       const transaction = Transaction.from(swapTxBuf);
 
-      // 연결 설정
+      // Setup connection
       const connection = await getStableConnection();
 
-      // 최신 블록해시로 교체
+      // Replace with latest blockhash
       const { blockhash } = await connection.getLatestBlockhash('confirmed');
       transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey; // 혹시 없으면 명시적으로 지정
+      transaction.feePayer = publicKey; // Explicitly set if not present
 
-      // 5) 메모 인스트럭션 추가 (옵션)
+      // Add memo instruction (optional)
       if (memo && memo.trim()) {
-        // 🏷️ 앱 식별자를 포함한 메모 생성
+        // Create memo with app identifier
         const appMemo = `[SwapChat] ${memo.trim()}`;
         const memoInstruction = createMemoInstruction(appMemo, publicKey);
         transaction.add(memoInstruction);
       }
 
       try {
-        // 6) 지갑 어댑터를 통한 서명
+        // Sign through wallet adapter
         const signedTransaction = await signTransaction(transaction);
 
-        // 7) 서명된 트랜잭션 전송
+        // Send signed transaction
         const txId = await connection.sendRawTransaction(signedTransaction.serialize(), {
           skipPreflight: false,
           preflightCommitment: 'confirmed'
         });
-        
-        // 8) 트랜잭션 확인 - Alchemy RPC를 사용한 하이브리드 방식
+
+        // Confirm transaction - hybrid approach using Alchemy RPC
         const alchemyRpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
         let confirmed = false;
-        
+
         if (alchemyRpcUrl && alchemyRpcUrl.includes('alchemy')) {
-          // Alchemy RPC 사용 시 WebSocket 지원 하이브리드 확인
+          // Hybrid confirmation with WebSocket support when using Alchemy RPC
           const alchemyConnection = createAlchemyConnection(alchemyRpcUrl);
-          
+
           try {
             confirmed = await confirmTransactionHybrid(alchemyConnection, txId, {
               timeout: 30000,
               commitment: 'confirmed',
               useWebSocket: true
             });
-            
+
           } catch (error) {
             console.error('Hybrid confirmation error:', error);
-            // 폴백: 기존 연결로 한 번 더 시도
+            // Fallback: retry with existing connection
             confirmed = await confirmTransactionHybrid(connection, txId, {
               timeout: 15000,
               commitment: 'confirmed',
-              useWebSocket: false // 폴백은 폴링만 사용
+              useWebSocket: false // Fallback uses polling only
             });
           }
         } else {
-          // Alchemy가 아닌 경우 폴링만 사용
+          // Use polling only for non-Alchemy RPCs
           confirmed = await confirmTransactionHybrid(connection, txId, {
             timeout: 30000,
             commitment: 'confirmed',
             useWebSocket: false
           });
         }
-        
+
+
         if (!confirmed) {
           console.warn('Transaction confirmation timeout, but may still succeed');
-          // 계속 진행 (실제로는 성공했을 가능성이 높음)
+          // Continue (likely succeeded anyway)
         }
 
-        // 🎯 메모가 있는 경우 트랜잭션 확정 후 메모 확인 및 채팅에 추가
+        // If memo exists, verify and add to chat after transaction confirmation
         if (memo && memo.trim()) {
           try {
-            // 직접 연결로 메모 확인
+            // Verify memo with direct connection
             const memoText = await extractMemoFromTransaction(connection, txId);
 
             if (memoText && memoText.includes('[SwapChat]')) {
               const cleanMemo = memoText.replace('[SwapChat]', '').trim();
 
-              // 트랜잭션 정보 가져오기 (직접 연결 사용)
+              // Get transaction info (using direct connection)
               const txInfo = await connection.getTransaction(txId, {
                 commitment: 'confirmed',
                 maxSupportedTransactionVersion: 0,
@@ -263,7 +265,7 @@ export function useSwap() {
               if (txInfo) {
                 const senderAddress = txInfo.transaction.message.staticAccountKeys[0]?.toString() || 'Unknown';
 
-                // 전역 메시지에 추가 (useChatMessages의 글로벌 저장소에 직접 추가)
+                // Add to global messages (directly add to useChatMessages global store)
                 try {
                   const { addMessage } = await import('./useChatMessages');
                   await addMessage('sol-usdc', {
@@ -280,7 +282,7 @@ export function useSwap() {
               }
             }
           } catch (memoError) {
-            // 메모 확인 실패해도 기본 메시지 추가 시도
+            // Try adding default message even if memo verification fails
             try {
               const { addMessage } = await import('./useChatMessages');
               await addMessage('sol-usdc', {
@@ -297,7 +299,7 @@ export function useSwap() {
           }
         }
 
-        // 트랜잭션 상태 업데이트
+        // Update transaction status
         updateState({ signature: txId, loading: false });
 
         return { success: true, signature: txId };
@@ -305,45 +307,46 @@ export function useSwap() {
       } catch (sendError) {
         throw sendError;
       }
-      
+
+
     } catch (error) {
-      let errorMessage = '스왑 실행 실패';
-      
+      let errorMessage = 'Failed to execute swap';
+
       if (error instanceof Error) {
         if (error.message.includes('insufficient funds')) {
-          errorMessage = '잔액이 부족합니다.';
+          errorMessage = 'Insufficient balance.';
         } else if (error.message.includes('slippage')) {
-          errorMessage = '슬리피지 한도를 초과했습니다. 설정을 조정하거나 다시 시도해주세요.';
+          errorMessage = 'Slippage limit exceeded. Please adjust settings or try again.';
         } else if (error.message.includes('User rejected')) {
-          errorMessage = '사용자가 트랜잭션을 취소했습니다.';
+          errorMessage = 'User cancelled the transaction.';
         } else if (error.message.includes('signature verification failure')) {
-          errorMessage = '트랜잭션 서명 검증에 실패했습니다. 다시 시도해주세요.';
+          errorMessage = 'Transaction signature verification failed. Please try again.';
         } else if (error.message.includes('Transaction too large')) {
-          errorMessage = '트랜잭션이 너무 큽니다. 메모를 짧게 하거나 다시 시도해주세요.';
+          errorMessage = 'Transaction is too large. Please shorten the memo or try again.';
         } else {
           errorMessage = error.message;
         }
       }
-      
+
       updateState({ loading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
   }, [publicKey, signTransaction, updateState]);
 
-  // 🔄 간편 스왑 함수들
+  // Convenient swap functions
   const swapSOLtoUSDC = useCallback(async (solAmount: number, memo?: string): Promise<SwapResult> => {
     const quote = await getQuote('SOL', 'USDC', solAmount);
-    if (!quote) return { success: false, error: '견적 조회 실패' };
+    if (!quote) return { success: false, error: 'Failed to get quote' };
     return executeSwap(quote, memo);
   }, [getQuote, executeSwap]);
 
   const swapUSDCtoSOL = useCallback(async (usdcAmount: number, memo?: string): Promise<SwapResult> => {
     const quote = await getQuote('USDC', 'SOL', usdcAmount);
-    if (!quote) return { success: false, error: '견적 조회 실패' };
+    if (!quote) return { success: false, error: 'Failed to get quote' };
     return executeSwap(quote, memo);
   }, [getQuote, executeSwap]);
 
-  // 🧹 상태 초기화
+  // Reset state
   const reset = useCallback(() => {
     setState({
       loading: false,
@@ -355,17 +358,17 @@ export function useSwap() {
   }, []);
 
   return {
-    // 상태
+    // State
     ...state,
-    
-    // 함수들
+
+    // Functions
     getQuote,
     executeSwap,
     swapSOLtoUSDC,
     swapUSDCtoSOL,
     reset,
-    
-    // 편의 속성들
+
+    // Convenience properties
     canSwap: !!publicKey && !state.loading,
     hasQuote: !!state.quote,
     isSwapping: state.loading,

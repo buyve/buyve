@@ -8,7 +8,7 @@ export interface RateLimitResult {
 }
 
 export class RedisRateLimiter {
-  // IP 기반 rate limiting
+  // IP-based rate limiting
   static async checkRateLimit(
     ip: string,
     category: string,
@@ -16,9 +16,9 @@ export class RedisRateLimiter {
     windowSeconds: number = 60
   ): Promise<RateLimitResult> {
     const key = `rate_limit:${category}:${ip}`;
-    
+
     try {
-      // Redis가 사용 불가능한 경우 허용
+      // Allow if Redis is unavailable
       if (!redisCache.isReady()) {
         return {
           allowed: true,
@@ -28,14 +28,14 @@ export class RedisRateLimiter {
         };
       }
 
-      // 현재 카운트 조회
+      // Get current count
       const currentValue = await redisCache.get(key);
       const current = currentValue ? currentValue + 1 : 1;
-      
-      // 카운트 업데이트
+
+      // Update count
       await redisCache.set(key, current, windowSeconds);
-      
-      // TTL 확인
+
+      // Check TTL
       const ttl = await redisCache.ttl(key);
       const resetTime = Date.now() + (Math.max(ttl, 0) * 1000);
 
@@ -47,7 +47,7 @@ export class RedisRateLimiter {
       };
     } catch (error) {
       console.error('Rate limit check error:', error);
-      // 에러 시 허용 (fail open)
+      // Allow on error (fail open)
       return {
         allowed: true,
         remaining: limit,
@@ -57,7 +57,7 @@ export class RedisRateLimiter {
     }
   }
 
-  // 사용자별 rate limiting
+  // User-based rate limiting
   static async checkUserRateLimit(
     walletAddress: string,
     category: string,
@@ -65,9 +65,9 @@ export class RedisRateLimiter {
     windowSeconds: number = 60
   ): Promise<RateLimitResult> {
     const key = `rate_limit:user:${category}:${walletAddress}`;
-    
+
     try {
-      // Redis가 사용 불가능한 경우 허용
+      // Allow if Redis is unavailable
       if (!redisCache.isReady()) {
         return {
           allowed: true,
@@ -77,11 +77,11 @@ export class RedisRateLimiter {
         };
       }
 
-      // 현재 카운트 조회
+      // Get current count
       const currentValue = await redisCache.get(key);
       const current = currentValue ? currentValue + 1 : 1;
-      
-      // 카운트 업데이트
+
+      // Update count
       await redisCache.set(key, current, windowSeconds);
 
       const ttl = await redisCache.ttl(key);
@@ -104,16 +104,16 @@ export class RedisRateLimiter {
     }
   }
 
-  // 글로벌 rate limiting (모든 사용자 대상)
+  // Global rate limiting (for all users)
   static async checkGlobalRateLimit(
     category: string,
     limit: number,
     windowSeconds: number = 60
   ): Promise<RateLimitResult> {
     const key = `rate_limit:global:${category}`;
-    
+
     try {
-      // Redis가 사용 불가능한 경우 허용
+      // Allow if Redis is unavailable
       if (!redisCache.isReady()) {
         return {
           allowed: true,
@@ -123,11 +123,11 @@ export class RedisRateLimiter {
         };
       }
 
-      // 현재 카운트 조회
+      // Get current count
       const currentValue = await redisCache.get(key);
       const current = currentValue ? currentValue + 1 : 1;
-      
-      // 카운트 업데이트
+
+      // Update count
       await redisCache.set(key, current, windowSeconds);
 
       const ttl = await redisCache.ttl(key);
@@ -150,7 +150,7 @@ export class RedisRateLimiter {
     }
   }
 
-  // Rate limit 정보 조회
+  // Get rate limit information
   static async getRateLimitInfo(
     key: string
   ): Promise<{ current: number; ttl: number; resetTime: number }> {
@@ -161,7 +161,7 @@ export class RedisRateLimiter {
 
       const current = await redisCache.get(key);
       const ttl = await redisCache.ttl(key);
-      
+
       return {
         current: current ? parseInt(current) : 0,
         ttl: Math.max(ttl, 0),
@@ -173,7 +173,7 @@ export class RedisRateLimiter {
     }
   }
 
-  // Rate limit 리셋
+  // Reset rate limit
   static async resetRateLimit(key: string): Promise<boolean> {
     try {
       await redisCache.del(key);
@@ -184,32 +184,32 @@ export class RedisRateLimiter {
     }
   }
 
-  // Rate limit 통계
+  // Rate limit statistics
   static async getRateLimitStats(category: string): Promise<any> {
     try {
       if (!redisCache.isReady()) {
-        return { 
-          totalKeys: 0, 
-          category, 
+        return {
+          totalKeys: 0,
+          category,
           timestamp: new Date().toISOString(),
           note: 'Redis not available'
         };
       }
 
-      // keys 명령어 대신 scan을 사용하는 것이 좋지만, 
-      // 현재 구조상 직접 client 접근 필요
-      return { 
-        totalKeys: 0, 
-        category, 
+      // Using scan instead of keys command would be better,
+      // but direct client access is required with current structure
+      return {
+        totalKeys: 0,
+        category,
         timestamp: new Date().toISOString(),
         note: 'Statistics temporarily disabled'
       };
     } catch (error) {
       console.error('Rate limit stats error:', error);
-      return { 
-        error: error.message, 
-        category, 
-        timestamp: new Date().toISOString() 
+      return {
+        error: error.message,
+        category,
+        timestamp: new Date().toISOString()
       };
     }
   }

@@ -1,7 +1,7 @@
 import { redisCache } from './redis-cache';
 
 export class SessionManager {
-  // 세션 생성
+  // Create session
   static async createSession(walletAddress: string, token: string, profileData?: any) {
     const sessionKey = `session:${walletAddress}`;
     const sessionData = {
@@ -13,10 +13,10 @@ export class SessionManager {
     };
 
     try {
-      // 세션 저장 (1시간)
+      // Save session (1 hour)
       await redisCache.set(sessionKey, sessionData, 3600);
 
-      // 활성 사용자 세트에 추가
+      // Add to active users set
       await redisCache.client?.sAdd('active:users', walletAddress);
 
       return { success: true, sessionData };
@@ -26,18 +26,18 @@ export class SessionManager {
     }
   }
 
-  // 세션 조회
+  // Retrieve session
   static async getSession(walletAddress: string) {
     const sessionKey = `session:${walletAddress}`;
-    
+
     try {
       const sessionData = await redisCache.get(sessionKey);
-      
+
       if (!sessionData) {
         return { success: false, error: 'Session not found' };
       }
 
-      // 활동 시간 업데이트
+      // Update last activity time
       sessionData.lastActivity = Date.now();
       await redisCache.set(sessionKey, sessionData, 3600);
 
@@ -48,14 +48,14 @@ export class SessionManager {
     }
   }
 
-  // 세션 무효화
+  // Invalidate session
   static async invalidateSession(walletAddress: string) {
     const sessionKey = `session:${walletAddress}`;
-    
+
     try {
       await redisCache.del(sessionKey);
       await redisCache.client?.sRem('active:users', walletAddress);
-      
+
       return { success: true };
     } catch (error) {
       console.error('Session invalidation error:', error);
@@ -63,13 +63,13 @@ export class SessionManager {
     }
   }
 
-  // 세션 갱신
+  // Refresh session
   static async refreshSession(walletAddress: string, extendMinutes: number = 60) {
     const sessionKey = `session:${walletAddress}`;
-    
+
     try {
       const sessionData = await redisCache.get(sessionKey);
-      
+
       if (!sessionData) {
         return { success: false, error: 'Session not found' };
       }
@@ -84,7 +84,7 @@ export class SessionManager {
     }
   }
 
-  // 활성 사용자 목록 조회
+  // Get active users list
   static async getActiveUsers() {
     try {
       const activeUsers = await redisCache.client?.sMembers('active:users');
@@ -95,19 +95,19 @@ export class SessionManager {
     }
   }
 
-  // 만료된 세션 정리
+  // Clean up expired sessions
   static async cleanupExpiredSessions() {
     try {
       const activeUsers = await redisCache.client?.sMembers('active:users');
-      
+
       if (!activeUsers) return { success: true, cleaned: 0 };
 
       let cleanedCount = 0;
-      
+
       for (const walletAddress of activeUsers) {
         const sessionKey = `session:${walletAddress}`;
         const exists = await redisCache.exists(sessionKey);
-        
+
         if (!exists) {
           await redisCache.client?.sRem('active:users', walletAddress);
           cleanedCount++;
@@ -121,7 +121,7 @@ export class SessionManager {
     }
   }
 
-  // 세션 통계
+  // Session statistics
   static async getSessionStats() {
     try {
       const activeUsers = await redisCache.client?.sMembers('active:users');

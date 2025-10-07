@@ -17,18 +17,18 @@ interface TokenAvatarProps {
   tokenName?: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  // 채팅방에서 미리 조회한 이미지 URL (우선사용)
+  // Image URL pre-fetched from chatroom (priority use)
   imageUrl?: string | null;
 }
 
-// Jupiter 메타데이터 타입은 tokenImageFallback에서 가져옴
+// Jupiter metadata type is imported from tokenImageFallback
 
 export default function TokenAvatar({
   tokenAddress,
   tokenName = 'Token',
   size = 'md',
   className = '',
-  imageUrl // 채팅방에서 전달받은 이미지 URL
+  imageUrl // Image URL passed from chatroom
 }: TokenAvatarProps) {
 
   const [imageError, setImageError] = useState(false);
@@ -44,11 +44,11 @@ export default function TokenAvatar({
   } | null>(null);
   const [imageSources, setImageSources] = useState<string[]>([]);
   const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
-  
-  // 크기 설정
+
+  // Size settings
   const sizeClasses = {
     sm: 'h-8 w-8',
-    md: 'h-12 w-12', 
+    md: 'h-12 w-12',
     lg: 'h-16 w-16'
   };
 
@@ -58,29 +58,29 @@ export default function TokenAvatar({
     lg: 64
   };
 
-  // 🎯 토큰 메타데이터 및 이미지 소스 조회
+  // 🎯 Fetch token metadata and image sources
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        // 1. 이미지 소스들 조회 (캐싱 적용)
+        // 1. Fetch image sources (with caching)
         const sources = await fetchTokenImageWithFallbacks(tokenAddress, imageUrl);
 
-        // 2. 원본 URL을 먼저 시도하고, 실패 시에만 최적화/프록시 시도
+        // 2. Try original URL first, then optimized/proxied only on failure
         const optimizedSources: string[] = [];
         sources.forEach(url => {
-          optimizedSources.push(url); // 원본을 먼저
+          optimizedSources.push(url); // Original first
           optimizedSources.push(getOptimizedImageUrl(url, iconSizes[size]));
           optimizedSources.push(getProxiedImageUrl(url));
         });
 
         setImageSources(optimizedSources);
-        
-        // 3. 첫 번째 이미지 프리로딩
+
+        // 3. Preload first image
         if (optimizedSources[0]) {
           ImageCacheManager.preload(optimizedSources[0]);
         }
 
-        // 4. 메타데이터 조회 (캐싱됨)
+        // 4. Fetch metadata (cached)
         const [metaplexResult, jupiterToken] = await Promise.allSettled([
           fetchTokenMetadataWithRetry(tokenAddress, 2),
           jupiterTokenListCache.getToken(tokenAddress)
@@ -103,7 +103,7 @@ export default function TokenAvatar({
     }
   }, [tokenAddress, imageUrl, size]);
 
-  // 이미지 소스가 변경될 때 인덱스 리셋
+  // Reset index when image sources change
   useEffect(() => {
     setCurrentUrlIndex(0);
     setImageError(false);
@@ -112,7 +112,7 @@ export default function TokenAvatar({
   const handleImageError = useCallback(() => {
     if (currentUrlIndex < imageSources.length - 1) {
       setCurrentUrlIndex(prev => prev + 1);
-      // 다음 이미지 프리로딩
+      // Preload next image
       const nextUrl = imageSources[currentUrlIndex + 1];
       if (nextUrl) {
         ImageCacheManager.preload(nextUrl);
@@ -122,7 +122,7 @@ export default function TokenAvatar({
     }
   }, [currentUrlIndex, imageSources, tokenName]);
 
-  // 토큰 이름의 첫 글자들을 폴백으로 사용
+  // Use first letters of token name as fallback
   const avatarFallback = getTokenAvatarFallback(
     tokenName,
     imageUrl,
@@ -130,7 +130,7 @@ export default function TokenAvatar({
     jupiterMetadata
   );
 
-  // 현재 사용할 이미지 URL 결정
+  // Determine current image URL to use
   const currentImageUrl = imageSources.length > 0 ? imageSources[currentUrlIndex] : undefined;
 
 

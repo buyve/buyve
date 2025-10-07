@@ -66,7 +66,7 @@ function truncateMemoByBytes(memo: string, limit = MEMO_BYTE_LIMIT) {
 
 // Memo instruction creation function
 function createMemoInstruction(memo: string, signer: PublicKey) {
-  // 메모를 바이트 단위로 제한하여 트랜잭션 크기 증가를 방지
+  // Limit memo to byte units to prevent transaction size increase
   const truncatedMemo = truncateMemoByBytes(memo);
 
   return new TransactionInstruction({
@@ -136,9 +136,9 @@ export default function ChatInput({ roomId }: Props) {
     clearError,
   } = useMemo();
 
-  // 🎯 Solana connection settings (프록시 사용으로 자동 Connection Pool 활용)
+  // 🎯 Solana connection settings (automatic Connection Pool usage via proxy)
   const connection = useReactMemo(() => {
-    // 브라우저 환경: 프록시를 통해 자동으로 Connection Pool 사용
+    // Browser environment: use Connection Pool automatically via proxy
     if (typeof window !== 'undefined') {
       return new Connection(
         `${window.location.origin}/api/solana-rpc`,
@@ -151,7 +151,7 @@ export default function ChatInput({ roomId }: Props) {
       );
     }
 
-    // 서버 환경 (폴백)
+    // Server environment (fallback)
     return new Connection(
       process.env.NEXT_PUBLIC_RPC_URL || 'https://solana-mainnet.g.alchemy.com/v2/CLIspK_3J2GVAuweafRIUoHzWjyn07rz',
       {

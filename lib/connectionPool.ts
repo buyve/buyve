@@ -1,10 +1,10 @@
 import { Connection, Commitment } from '@solana/web3.js';
 
 /**
- * 🎯 Connection Pool 시스템
- * - 5-10개의 Connection만 생성하여 재사용
- * - Round-robin 방식으로 부하 분산
- * - Rate Limit 초과 문제 해결
+ * Connection Pool System
+ * - Create and reuse only 5-10 connections
+ * - Load distribution using round-robin approach
+ * - Resolve rate limit issues
  */
 
 interface PoolConfig {
@@ -28,7 +28,7 @@ class ConnectionPool {
   }
 
   /**
-   * Pool 초기화 (서버 시작 시 한 번만 실행)
+   * Initialize pool (execute once at server startup)
    */
   private initialize() {
     if (this.isInitialized) return;
@@ -40,9 +40,9 @@ class ConnectionPool {
         disableRetryOnRateLimit: true,
         httpHeaders: {
           'User-Agent': 'SolanaSwapChat/1.0',
-          'Connection': 'keep-alive', // HTTP Keep-Alive로 연결 재사용
+          'Connection': 'keep-alive', // Reuse connection with HTTP Keep-Alive
         },
-        // fetch 옵션으로 연결 유지
+        // Maintain connection with fetch options
         fetch: (url, options) => {
           return fetch(url, {
             ...options,
@@ -62,7 +62,7 @@ class ConnectionPool {
   }
 
   /**
-   * Round-robin 방식으로 Connection 반환
+   * Return Connection using round-robin approach
    */
   getConnection(): Connection {
     if (!this.isInitialized) {
@@ -76,7 +76,7 @@ class ConnectionPool {
   }
 
   /**
-   * Pool 상태 확인
+   * Check pool status
    */
   getStatus() {
     return {
@@ -89,7 +89,7 @@ class ConnectionPool {
   }
 
   /**
-   * Pool 리셋 (문제 발생 시)
+   * Reset pool (use when issues occur)
    */
   reset() {
     this.pool = [];
@@ -98,7 +98,7 @@ class ConnectionPool {
   }
 }
 
-// 싱글톤 인스턴스 (서버 전역에서 공유)
+// Singleton instance (shared across server)
 export const connectionPool = new ConnectionPool();
 
 export default connectionPool;

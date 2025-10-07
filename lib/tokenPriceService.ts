@@ -4,20 +4,20 @@ import type { Database } from './supabase';
 type TokenPriceHistoryRow = Database['public']['Tables']['token_price_history']['Row'];
 type TokenPriceHistoryInsert = Database['public']['Tables']['token_price_history']['Insert'];
 
-// 📊 토큰 가격 히스토리 관리 서비스
+// Token price history management service
 export class TokenPriceService {
-  
+
   /**
-   * 1분 단위로 시간을 정규화합니다
+   * Normalize time to 1-minute intervals
    */
   private normalize1MinTimestamp(date: Date): string {
     const normalized = new Date(date);
-    normalized.setSeconds(0, 0); // 초, 밀리초를 0으로 설정
+    normalized.setSeconds(0, 0); // Set seconds and milliseconds to 0
     return normalized.toISOString();
   }
 
   /**
-   * Jupiter API에서 실시간 가격을 가져옵니다
+   * Fetch real-time price from Jupiter API
    */
   private async fetchJupiterPrice(tokenAddress: string): Promise<number | null> {
     try {
@@ -43,7 +43,7 @@ export class TokenPriceService {
   }
 
   /**
-   * 토큰의 현재 가격을 DB에 저장하거나 업데이트합니다
+   * Save or update token's current price in database
    */
   async updateTokenPrice(tokenAddress: string): Promise<boolean> {
     try {
@@ -113,7 +113,7 @@ export class TokenPriceService {
   }
 
   /**
-   * 토큰의 가격 히스토리를 조회합니다 (최대 60개)
+   * Retrieve token price history (maximum 60 entries)
    */
   async getTokenPriceHistory(tokenAddress: string): Promise<TokenPriceHistoryRow[]> {
     try {
@@ -128,7 +128,7 @@ export class TokenPriceService {
         return [];
       }
 
-      // 시간순으로 정렬 (오래된 것부터)
+      // Sort chronologically (oldest first)
       return (data || []).reverse();
     } catch {
       return [];
@@ -136,7 +136,7 @@ export class TokenPriceService {
   }
 
   /**
-   * 토큰의 최신 가격을 조회합니다
+   * Retrieve token's latest price
    */
   async getLatestTokenPrice(tokenAddress: string): Promise<number | null> {
     try {
@@ -149,7 +149,7 @@ export class TokenPriceService {
         .single();
 
       if (error || !data) {
-        // DB에 데이터가 없으면 실시간 API 호출
+        // Call real-time API if no data in DB
         return await this.fetchJupiterPrice(tokenAddress);
       }
 
@@ -160,7 +160,7 @@ export class TokenPriceService {
   }
 
   /**
-   * 여러 토큰의 가격을 배치로 가져옵니다
+   * Fetch prices for multiple tokens in batch
    */
   private async fetchBatchPrices(tokenAddresses: string[]): Promise<Map<string, number>> {
     const priceMap = new Map<string, number>();
@@ -192,40 +192,40 @@ export class TokenPriceService {
   }
 
   /**
-   * 여러 토큰의 가격을 배치 UPSERT로 업데이트합니다 (Supabase 내장 기능 사용)
-   * 🎯 개선: DB 기반 캐시로 Jupiter API 호출 최소화 (30초 TTL)
+   * Update prices for multiple tokens using batch UPSERT (using Supabase built-in feature)
+   * Improvement: Minimize Jupiter API calls with DB-based cache (30s TTL)
    */
   async updateMultipleTokenPricesBatch(tokenAddresses: string[]): Promise<boolean> {
     if (tokenAddresses.length === 0) return true;
 
     try {
-      // 🎯 0. DB 캐시 체크 (최근 30초 이내 데이터 확인)
+      // 0. Check DB cache (verify data within last 30 seconds)
       const { data: recentData } = await supabase
         .from('token_price_history')
         .select('token_address, price, timestamp_1min')
         .in('token_address', tokenAddresses)
-        .gte('timestamp_1min', new Date(Date.now() - 30000).toISOString()) // 30초 이내
+        .gte('timestamp_1min', new Date(Date.now() - 30000).toISOString()) // Within 30 seconds
         .order('timestamp_1min', { ascending: false });
 
-      // 최근 데이터가 있는 토큰 제외
+      // Exclude tokens with recent data
       const recentTokens = new Set(recentData?.map(d => d.token_address) || []);
       const needUpdateTokens = tokenAddresses.filter(t => !recentTokens.has(t));
 
-      // 모든 토큰이 최신 상태면 Jupiter 호출 스킵
+      // Skip Jupiter call if all tokens are up-to-date
       if (needUpdateTokens.length === 0) {
         return true;
       }
 
-      // 1. 캐시 미스된 토큰만 배치로 가격 데이터 가져오기
+      // 1. Fetch price data in batch for cache-missed tokens only
       const priceMap = await this.fetchBatchPrices(needUpdateTokens);
       if (priceMap.size === 0) {
         return false;
       }
 
-      // 2. 현재 시간을 1분 단위로 정규화
+      // 2. Normalize current time to 1-minute intervals
       const timestamp1min = this.normalize1MinTimestamp(new Date());
 
-      // 3. 기존 데이터 확인 (캐시 미스된 토큰만 체크)
+      // 3. Check existing data (only for cache-missed tokens)
       const { data: existingData } = await supabase
         .from('token_price_history')
         .select('*')
@@ -236,14 +236,14 @@ export class TokenPriceService {
         (existingData || []).map(item => [item.token_address, item])
       );
 
-      // 4. 배치 UPSERT 데이터 준비
+      // 4. Prepare batch UPSERT data
       const upsertData: TokenPriceHistoryInsert[] = [];
 
       for (const [tokenAddress, currentPrice] of priceMap) {
         const existing = existingMap.get(tokenAddress);
 
         if (existing) {
-          // 기존 데이터 업데이트용 - OHLC 계산
+          // For updating existing data - calculate OHLC
           const highPrice = Math.max(existing.high_price, currentPrice);
           const lowPrice = Math.min(existing.low_price, currentPrice);
 
@@ -258,7 +258,7 @@ export class TokenPriceService {
             volume: 0,
           });
         } else {
-          // 새 데이터 삽입용 - 모든 OHLC 값이 현재 가격
+          // For inserting new data - all OHLC values are current price
           upsertData.push({
             token_address: tokenAddress,
             price: currentPrice,
@@ -274,7 +274,7 @@ export class TokenPriceService {
 
       if (upsertData.length === 0) return true;
 
-      // 5. Supabase 배열 upsert 실행
+      // 5. Execute Supabase array upsert
       const { error } = await supabase
         .from('token_price_history')
         .upsert(upsertData, {
@@ -295,7 +295,7 @@ export class TokenPriceService {
   }
 
   /**
-   * 여러 토큰의 가격을 일괄 업데이트합니다 (기존 방식 - 호환성 유지)
+   * Update prices for multiple tokens in bulk (legacy approach - maintaining compatibility)
    */
   async updateMultipleTokenPrices(tokenAddresses: string[]): Promise<void> {
     const promises = tokenAddresses.map(address => this.updateTokenPrice(address));
@@ -303,11 +303,11 @@ export class TokenPriceService {
   }
 
   /**
-   * 오래된 가격 데이터를 정리합니다 (60개 초과 시 자동 삭제)
+   * Clean up old price data (auto-delete when exceeding 60 entries)
    */
   async cleanupOldPriceData(tokenAddress: string): Promise<void> {
     try {
-      // 최신 60개를 제외한 오래된 데이터 삭제
+      // Delete old data except latest 60 entries
       const { data: latestRecords } = await supabase
         .from('token_price_history')
         .select('id')
@@ -316,7 +316,7 @@ export class TokenPriceService {
         .limit(60);
 
       if (!latestRecords || latestRecords.length <= 60) {
-        return; // 정리할 데이터가 없음
+        return; // No data to clean up
       }
 
       const keepIds = latestRecords.map(record => record.id);
@@ -335,7 +335,7 @@ export class TokenPriceService {
   }
 
   /**
-   * 차트용 데이터 포맷으로 변환합니다
+   * Convert to chart data format
    */
   formatForChart(priceHistory: TokenPriceHistoryRow[]): Array<{
     timestamp: number;
@@ -360,17 +360,17 @@ export class TokenPriceService {
         open: record.open_price,
         high: record.high_price,
         low: record.low_price,
-        time: index % 10 === 0 ? timeLabel : '', // 10분마다 표시
+        time: index % 10 === 0 ? timeLabel : '', // Display every 10 minutes
         fullTime: timeLabel,
       };
     });
   }
 }
 
-// 싱글톤 인스턴스
+// Singleton instance
 export const tokenPriceService = new TokenPriceService();
 
-// 기본 토큰 목록
+// Default token list
 export const DEFAULT_TOKENS = [
   'So11111111111111111111111111111111111111112', // SOL
   'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC

@@ -4,7 +4,7 @@ import { clientCache } from '@/lib/clientCache';
 import { chatRoomTokenCollector } from '@/lib/chatRoomTokenCollector';
 import { DEFAULT_TOKENS } from '@/lib/tokenPriceService';
 
-// 🎯 통일된 가격 데이터 타입 (Jupiter v6 기준)
+// Unified price data type (based on Jupiter v6)
 export interface UnifiedPriceData {
   tokenAddress: string;
   symbol: string;
@@ -16,23 +16,23 @@ export interface UnifiedPriceData {
   hasHistory: boolean;
 }
 
-// 차트 데이터 포인트 (OHLCV 형식)
+// Chart data point (OHLCV format)
 export interface UnifiedChartPoint {
   timestamp: number;
   open: number;
   high: number;
   low: number;
   close: number;
-  price: number; // close와 동일하지만 호환성 유지
+  price: number; // Same as close but maintained for compatibility
   time: string;
   fullTime: string;
 }
 
-// 구독자 콜백 타입
+// Subscriber callback types
 type PriceUpdateCallback = (data: UnifiedPriceData) => void;
 type ChartUpdateCallback = (data: UnifiedChartPoint[]) => void;
 
-// 🚀 통일된 가격 관리자 (모든 데이터 소스 통합)
+// Unified price manager (integrating all data sources)
 class UnifiedPriceManager {
   private channels: Map<string, RealtimeChannel> = new Map();
   private priceSubscribers: Map<string, Set<PriceUpdateCallback>> = new Map();
@@ -41,13 +41,13 @@ class UnifiedPriceManager {
   private chartCache: Map<string, UnifiedChartPoint[]> = new Map();
   private updateIntervals: Map<string, NodeJS.Timeout> = new Map();
 
-  // 🎯 Jupiter API를 사용한 통일된 가격 조회
-  // Jupiter Lite API v3 엔드포인트에서 실시간 시세를 받아오고,
-  // 24시간 전 히스토리를 Supabase에서 끌어와 상승·하락률을 계산한 뒤
-  // 실패 시 DB 데이터로 폴백합니다.
+  // Fetch unified price using Jupiter API
+  // Retrieves real-time quotes from Jupiter Lite API v3 endpoint,
+  // fetches 24-hour history from Supabase to calculate price changes,
+  // and falls back to DB data on failure.
   private async fetchUnifiedPrice(tokenAddress: string): Promise<UnifiedPriceData | null> {
     try {
-      // 1. Jupiter Lite API v3에서 실시간 시세 조회
+      // 1. Fetch real-time quotes from Jupiter Lite API v3
       const response = await fetch(
         `https://lite-api.jup.ag/price/v3?ids=${tokenAddress}`
       );
@@ -63,7 +63,7 @@ class UnifiedPriceManager {
         throw new Error('Token not found in Jupiter API');
       }
 
-      // 2. Supabase에서 24시간 전 히스토리를 끌어와 상승·하락률 계산
+      // 2. Fetch 24-hour history from Supabase to calculate price changes
       const { data: history } = await supabase
         .from('token_price_history')
         .select('open_price, timestamp_1min')
@@ -85,7 +85,7 @@ class UnifiedPriceManager {
         priceChangePercent = (priceChange24h / price24hAgo) * 100;
       }
 
-      // 3. 토큰 심볼 조회 (캐시 또는 Jupiter API)
+      // 3. Fetch token symbol (from cache or Jupiter API)
       const symbol = await this.getTokenSymbol(tokenAddress);
 
       const unifiedData: UnifiedPriceData = {
@@ -101,14 +101,14 @@ class UnifiedPriceManager {
 
       return unifiedData;
     } catch (error) {
-      console.error('통일된 가격 조회 실패:', error);
+      console.error('Unified price lookup failed:', error);
 
-      // 4. 실패 시 DB 데이터로 폴백
+      // 4. Fallback to DB data on failure
       return await this.fetchPriceFromDatabase(tokenAddress);
     }
   }
 
-  // 데이터베이스에서 가격 조회 (폴백)
+  // Fetch price from database (fallback)
   private async fetchPriceFromDatabase(tokenAddress: string): Promise<UnifiedPriceData | null> {
     try {
       const { data, error } = await supabase

@@ -16,7 +16,7 @@ export default function TokenChart({ tokenAddress, className = '' }: TokenChartP
   const [priceChange, setPriceChange] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // SOL 토큰 주소 (기본값)
+  // SOL token address (default)
   const SOL_MINT = 'So11111111111111111111111111111111111111112';
   const targetToken = tokenAddress || SOL_MINT;
 
@@ -28,7 +28,7 @@ export default function TokenChart({ tokenAddress, className = '' }: TokenChartP
 
     setIsLoading(true);
 
-    // 🎯 unifiedPriceManager를 사용한 실시간 가격 구독
+    // 🎯 Real-time price subscription using unifiedPriceManager
     const unsubscribePrice = unifiedPriceManager.subscribeToPrice(
       targetToken,
       (priceData: UnifiedPriceData) => {
@@ -37,7 +37,7 @@ export default function TokenChart({ tokenAddress, className = '' }: TokenChartP
       }
     );
 
-    // 🎯 unifiedPriceManager를 사용한 차트 데이터 구독
+    // 🎯 Chart data subscription using unifiedPriceManager
     const unsubscribeChart = unifiedPriceManager.subscribeToChart(
       targetToken,
       (chartPoints: UnifiedChartPoint[]) => {
@@ -53,7 +53,7 @@ export default function TokenChart({ tokenAddress, className = '' }: TokenChartP
     };
   }, [targetToken, tokenAddress]);
 
-  // 차트 Y축 도메인 계산
+  // Calculate chart Y-axis domain
   const getYAxisDomain = () => {
     if (chartData.length === 0) return ['auto', 'auto'];
 
@@ -84,7 +84,7 @@ export default function TokenChart({ tokenAddress, className = '' }: TokenChartP
 
   return (
     <div className={`rounded-lg px-3 pt-3 ${className}`} style={{ backgroundColor: 'oklch(0.2393 0 0)' }}>
-      {/* 가격 정보 - 실시간 업데이트 */}
+      {/* Price information - real-time update */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-white">
@@ -98,7 +98,7 @@ export default function TokenChart({ tokenAddress, className = '' }: TokenChartP
         </div>
       </div>
 
-      {/* Recharts 차트 */}
+      {/* Recharts chart */}
       {chartData.length > 0 && !isLoading && tokenAddress && targetToken !== SOL_MINT ? (
         <div className="h-32 w-full">
           <ResponsiveContainer width="100%" height="100%">

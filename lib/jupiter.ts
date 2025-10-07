@@ -129,7 +129,7 @@ export class JupiterService {
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Jupiter Quote API 오류: ${response.status} - ${errorText}`);
+        throw new Error(`Jupiter Quote API error: ${response.status} - ${errorText}`);
       }
 
       const quote = await response.json() as JupiterQuote;

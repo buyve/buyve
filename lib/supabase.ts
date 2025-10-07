@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase에서 생성된 실제 Database 타입 정의
+// Actual Database type definition generated from Supabase
 export type Json =
   | string
   | number
@@ -174,12 +174,12 @@ export type Database = {
   }
 }
 
-// 환경 변수 검증 및 로드
+// Environment variable validation and loading
 function getSupabaseConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-  // 빌드 타임에는 에러를 던지지 않고 빈 값 반환
+  // Return empty values at build time without throwing error
   if (!url || !key) {
     console.warn('Supabase environment variables not found. Using empty values for build.')
     return { url: url || 'https://placeholder.supabase.co', key: key || 'placeholder-key' }
@@ -188,9 +188,9 @@ function getSupabaseConfig() {
   return { url, key }
 }
 
-// 서버 사이드 환경 변수 로드
+// Server-side environment variable loading
 function getSupabaseAdminConfig() {
-  // 클라이언트 사이드에서는 admin config를 사용하지 않음
+  // Do not use admin config on client-side
   if (typeof window !== 'undefined') {
     return null
   }
@@ -203,20 +203,20 @@ function getSupabaseAdminConfig() {
   }
 
   try {
-    // JWT 토큰 디코딩으로 role 확인
+    // Verify role by decoding JWT token
     const payload = JSON.parse(atob(serviceKey.split('.')[1]))
-    
+
     if (payload.role !== 'service_role') {
-      // 서비스 역할이 아닌 경우 에러 처리는 남김 (서버 오류 방지)
+      // Leave error handling for non-service roles (prevent server errors)
     }
   } catch {
-    // 토큰 디코딩 실패시 무시
+    // Ignore token decoding failures
   }
 
   return { url, serviceKey }
 }
 
-// 런타임 환경 변수 검증 (실제 API 호출 시에만)
+// Runtime environment variable validation (only for actual API calls)
 export function validateSupabaseConnection() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -226,7 +226,7 @@ export function validateSupabaseConnection() {
   }
 }
 
-// 서버 사이드 관리자 검증
+// Server-side admin validation
 export function validateSupabaseAdminConnection() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -236,13 +236,13 @@ export function validateSupabaseAdminConnection() {
   }
 }
 
-// 싱글톤 패턴으로 클라이언트 인스턴스 관리
+// Manage client instances with singleton pattern
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null
 let supabaseAdminInstance: ReturnType<typeof createClient<Database>> | null = null
 
-// 서버 사이드 관리용 클라이언트 (RLS 우회 가능)
+// Server-side admin client (can bypass RLS)
 export const supabaseAdmin = (() => {
-  // 클라이언트 사이드에서는 admin 클라이언트를 생성하지 않음
+  // Do not create admin client on client-side
   if (typeof window !== 'undefined') {
     return null as any
   }
@@ -255,8 +255,8 @@ export const supabaseAdmin = (() => {
 
     if (!supabaseAdminInstance) {
       supabaseAdminInstance = createClient<Database>(
-        adminConfig.url, 
-        adminConfig.serviceKey, // 서비스 키 사용으로 RLS 우회
+        adminConfig.url,
+        adminConfig.serviceKey, // Bypass RLS using service key
         {
           auth: {
             autoRefreshToken: false,
@@ -271,11 +271,11 @@ export const supabaseAdmin = (() => {
   }
 })()
 
-// Supabase 클라이언트 생성
+// Create Supabase client
 export const supabase = (() => {
   try {
     const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseConfig()
-    
+
     if (!supabaseInstance) {
       supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         auth: {
@@ -292,18 +292,18 @@ export const supabase = (() => {
     }
     return supabaseInstance
   } catch {
-    // 빌드 중 에러 처리
+    // Handle errors during build
     return null as any
   }
 })()
 
-// 편의를 위한 타입 별칭
+// Type aliases for convenience
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type ChatRoom = Database['public']['Tables']['chat_rooms']['Row']
 export type MessageCache = Database['public']['Tables']['message_cache']['Row']
 export type MessageType = Database['public']['Enums']['message_type_enum']
 
-// 데이터베이스 타입 정의
+// Database type definitions
 export interface MessageCacheRow {
   signature: string;
   token_address: string;
@@ -331,5 +331,5 @@ export interface ProfileRow {
   updated_at?: string;
 }
 
-// 타입이 적용된 Supabase 클라이언트 (기본 export)
+// Typed Supabase client (default export)
 export default supabase

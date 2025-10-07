@@ -8,20 +8,20 @@ import { getStableConnection as getLibStableConnection, checkSolanaConnection } 
 import { Connection } from '@solana/web3.js';
 
 interface WalletAdapterState {
-  // 연결 상태
+  // Connection state
   isConnected: boolean;
   isConnecting: boolean;
   isDisconnecting: boolean;
-  
-  // 지갑 정보
+
+  // Wallet info
   publicKey: PublicKey | null;
   walletName: string | null;
-  
-  // 잔고 정보
+
+  // Balance info
   balance: number | null;
   isLoadingBalance: boolean;
-  
-  // 에러 상태
+
+  // Error state
   error: string | null;
 }
 
@@ -47,18 +47,18 @@ export function useWalletAdapter() {
   
   const { connection } = useConnection();
 
-  // 상태 관리
+  // State management
   const [balance, setBalance] = useState<number | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
 
-  // 클라이언트 마운트 상태 확인
+  // Check client mount state
   useEffect(() => {
     setHasMounted(true);
   }, []);
 
-  // 지갑 상태 (hydration 안전)
+  // Wallet state (hydration safe)
   const walletState: WalletAdapterState = {
     isConnected: connected && hasMounted,
     isConnecting: connecting && hasMounted,
@@ -70,43 +70,43 @@ export function useWalletAdapter() {
     error,
   };
 
-  // 지갑 연결
+  // Connect wallet
   const connectWallet = useCallback(async () => {
     try {
       setError(null);
       await connect();
     } catch (error) {
-      setError(error instanceof Error ? error.message : '지갑 연결에 실패했습니다.');
+      setError(error instanceof Error ? error.message : 'Failed to connect wallet.');
     }
   }, [connect]);
 
-  // 지갑 연결 해제
+  // Disconnect wallet
   const disconnectWallet = useCallback(async () => {
     try {
       setError(null);
-      
-      // 지갑이 연결되어 있고 disconnect 함수가 존재하는지 확인
+
+      // Check if wallet is connected and disconnect function exists
       if (connected && disconnect && typeof disconnect === 'function') {
         await disconnect();
       }
-      
-      // 상태 초기화
+
+      // Reset state
       setBalance(null);
-      
+
     } catch (error) {
-      
-      // 에러가 발생해도 상태는 초기화
+
+      // Reset state even on error
       setBalance(null);
-      
-      // 사용자에게는 단순한 메시지로 표시
-      setError('지갑 연결 해제 중 오류가 발생했습니다.');
+
+      // Show simple message to user
+      setError('An error occurred while disconnecting wallet.');
     }
   }, [disconnect, connected]);
 
-  // 안정적인 연결 확보
+  // Get stable connection
   const getStableConnection = useCallback(async (): Promise<Connection> => {
     try {
-      // 현재 연결 상태를 먼저 빠르게 확인 (타임아웃 짧게)
+      // Quick health check with short timeout
       const quickHealthCheck = Promise.race([
         checkSolanaConnection(connection),
         new Promise<{ connected: boolean }>((_, reject) => 
@@ -118,8 +118,8 @@ export function useWalletAdapter() {
       if (healthCheck.connected) {
         return connection;
       }
-      
-      // 연결이 불안정하면 새로운 안정적인 연결 생성
+
+      // Create new stable connection if unstable
       return await getLibStableConnection();
     } catch (error) {
       // fallback to library stable connection
@@ -127,7 +127,7 @@ export function useWalletAdapter() {
     }
   }, [connection]);
 
-  // 잔고 조회 (안정적인 연결 사용)
+  // Fetch balance (using stable connection)
   const fetchBalance = useCallback(async () => {
     if (!publicKey) {
       setBalance(null);
@@ -161,12 +161,12 @@ export function useWalletAdapter() {
 
     // All retries failed
     console.error('[WalletAdapter] All balance fetch attempts failed:', lastError);
-    setError('잔고를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.');
+    setError('Failed to load balance. Please try again later.');
     setBalance(null);
     setIsLoadingBalance(false);
   }, [publicKey, getStableConnection]);
 
-  // 트랜잭션 전송
+  // Send transaction
   const sendSolanaTransaction = useCallback(async (
     transaction: Transaction,
     options: TransactionOptions = {}
@@ -177,39 +177,39 @@ export function useWalletAdapter() {
 
     try {
       setError(null);
-      
-      // 최신 블록해시 가져오기
+
+      // Get latest blockhash
       const connection = await getStableConnection();
       const { blockhash } = await connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
 
-      // 트랜잭션 전송
+      // Send transaction
       const signature = await sendTransaction(transaction, connection, {
         skipPreflight: options.skipPreflight,
         preflightCommitment: options.preflightCommitment || 'confirmed',
       });
 
-      // 트랜잭션 확인 대기
+      // Wait for transaction confirmation
       const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-      
+
       if (confirmation.value.err) {
-        throw new Error(`트랜잭션 실패: ${confirmation.value.err}`);
+        throw new Error(`Transaction failed: ${confirmation.value.err}`);
       }
 
-      
-      // 잔고 업데이트
+
+      // Update balance
       await fetchBalance();
-      
+
       return signature;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '트랜잭션 전송에 실패했습니다.';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send transaction.';
       setError(errorMessage);
       throw error;
     }
   }, [publicKey, sendTransaction, getStableConnection]);
 
-  // SOL 전송
+  // Send SOL
   const sendSol = useCallback(async (
     recipient: string | PublicKey,
     amount: number
@@ -237,10 +237,10 @@ export function useWalletAdapter() {
     }
   }, [publicKey, sendSolanaTransaction]);
 
-  // 메시지 서명
+  // Sign message
   const signWalletMessage = useCallback(async (message: string): Promise<Uint8Array> => {
     if (!signMessage) {
-      throw new Error('지갑이 메시지 서명을 지원하지 않습니다.');
+      throw new Error('Wallet does not support message signing.');
     }
 
     try {
@@ -248,16 +248,16 @@ export function useWalletAdapter() {
       const messageBytes = new TextEncoder().encode(message);
       return await signMessage(messageBytes);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '메시지 서명에 실패했습니다.';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign message.';
       setError(errorMessage);
       throw error;
     }
   }, [signMessage]);
 
-  // 트랜잭션 서명 (전송하지 않음)
+  // Sign transaction (without sending)
   const signWalletTransaction = useCallback(async (transaction: Transaction): Promise<Transaction> => {
     if (!signTransaction) {
-      throw new Error('지갑이 트랜잭션 서명을 지원하지 않습니다.');
+      throw new Error('Wallet does not support transaction signing.');
     }
 
     if (!publicKey) {
@@ -266,8 +266,8 @@ export function useWalletAdapter() {
 
     try {
       setError(null);
-      
-      // 최신 블록해시 설정
+
+      // Set latest blockhash
       const connection = await getStableConnection();
       const { blockhash } = await connection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
@@ -275,16 +275,16 @@ export function useWalletAdapter() {
 
       return await signTransaction(transaction);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '트랜잭션 서명에 실패했습니다.';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign transaction.';
       setError(errorMessage);
       throw error;
     }
   }, [signTransaction, publicKey, getStableConnection]);
 
-  // 여러 트랜잭션 서명
+  // Sign multiple transactions
   const signAllWalletTransactions = useCallback(async (transactions: Transaction[]): Promise<Transaction[]> => {
     if (!signAllTransactions) {
-      throw new Error('지갑이 다중 트랜잭션 서명을 지원하지 않습니다.');
+      throw new Error('Wallet does not support signing multiple transactions.');
     }
 
     if (!publicKey) {
@@ -293,8 +293,8 @@ export function useWalletAdapter() {
 
     try {
       setError(null);
-      
-      // 모든 트랜잭션에 최신 블록해시 설정
+
+      // Set latest blockhash for all transactions
       const connection = await getStableConnection();
       const { blockhash } = await connection.getLatestBlockhash();
       transactions.forEach(transaction => {
@@ -304,31 +304,31 @@ export function useWalletAdapter() {
 
       return await signAllTransactions(transactions);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '트랜잭션 서명에 실패했습니다.';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign transactions.';
       setError(errorMessage);
       throw error;
     }
   }, [signAllTransactions, publicKey, getStableConnection]);
 
-  // 에러 클리어
+  // Clear error
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  // 연결 상태가 변경될 때 잔고 조회 제거 (수동으로만 조회)
+  // Remove automatic balance fetch when connection state changes (manual fetch only)
   useEffect(() => {
     if (connected && publicKey) {
-      // 🚫 자동 잔고 조회 제거 - fetchBalance() 호출 제거
+      // Automatic balance fetch removed - no fetchBalance() call
     } else {
       setBalance(null);
     }
-  }, [connected, publicKey]); // fetchBalance 의존성 제거
+  }, [connected, publicKey]); // fetchBalance dependency removed
 
   return {
-    // 상태
+    // State
     ...walletState,
-    
-    // 액션
+
+    // Actions
     connect: connectWallet,
     disconnect: disconnectWallet,
     fetchBalance,
@@ -338,8 +338,8 @@ export function useWalletAdapter() {
     signTransaction: signWalletTransaction,
     signAllTransactions: signAllWalletTransactions,
     clearError,
-    
-    // 헬퍼
+
+    // Helpers
     formatAddress: (address?: string) => {
       if (!address) return '';
       return `${address.slice(0, 4)}...${address.slice(-4)}`;

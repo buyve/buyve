@@ -370,15 +370,15 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
   ) : (
     // PC version
     <div className="flex flex-col h-full py-6 justify-between" style={{ paddingLeft: '24px', paddingRight: '24px', backgroundColor: 'oklch(0.2393 0 0)', color: 'white' }}>
-              {/* Top trading section */}
+      {/* Top trading section */}
       <div className="space-y-4">
-                  {/* BUY/SELL tabs */}
+        {/* BUY/SELL tabs */}
         <div className="flex w-full gap-3">
-          <Button 
+          <Button
             variant={settings.mode === 'buy' ? 'default' : 'neutral'}
-                          className={`flex-1 h-10 font-semibold transition-all ${
-                settings.mode === 'buy' 
-                  ? 'text-white' 
+            className={`flex-1 h-10 font-semibold transition-all ${
+                settings.mode === 'buy'
+                  ? 'text-white'
                   : 'text-white hover:text-gray-300'
               }`}
               style={{ 
@@ -390,11 +390,11 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
           >
             Buy
           </Button>
-          <Button 
+          <Button
             variant={settings.mode === 'sell' ? 'default' : 'neutral'}
-                          className={`flex-1 h-10 font-semibold transition-all ${
-                settings.mode === 'sell' 
-                  ? 'text-white' 
+            className={`flex-1 h-10 font-semibold transition-all ${
+                settings.mode === 'sell'
+                  ? 'text-white'
                   : 'text-white hover:text-gray-300'
               }`}
               style={{ 
@@ -412,7 +412,7 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
         <div className="space-y-2">
           <label className="text-sm font-medium text-white">Amount</label>
           <div className="relative">
-                          <Input 
+            <Input
                 value={settings.quantity}
                 onChange={(e) => handleQuantityChange(e.target.value)}
                 placeholder={settings.mode === 'buy' ? 'Enter SOL amount' : 'Enter percentage (%)'}
@@ -428,7 +428,7 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
                   size="sm"
                 />
               ) : (
-                <TokenAvatar 
+                <TokenAvatar
                   key={`sell-${currentTokenAddress}-${settings.mode}`}
                   tokenAddress={currentTokenAddress}
                   tokenName={currentTokenName}
@@ -570,7 +570,7 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
       </div>
 
       {/* Bottom settings input section */}
-              <div className="space-y-4 pt-6 border-t border-gray-600">
+      <div className="space-y-4 pt-6 border-t border-gray-600">
         {/* Settings input */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">

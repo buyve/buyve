@@ -1,16 +1,16 @@
 import { redisCache } from './redis-cache';
 
 export class CacheManager {
-  // 토큰 메타데이터 캐싱 (1시간)
+  // Token metadata caching (1 hour)
   static async getTokenMetadata(tokenAddress: string) {
     const cacheKey = `token:metadata:${tokenAddress}`;
-    
+
     try {
       const cached = await redisCache.get(cacheKey);
       if (cached) {
         return { data: cached, fromCache: true };
       }
-      
+
       return { data: null, fromCache: false };
     } catch (error) {
       console.error('Cache get error for token metadata:', error);
@@ -20,8 +20,8 @@ export class CacheManager {
 
   static async setTokenMetadata(tokenAddress: string, metadata: any) {
     const cacheKey = `token:metadata:${tokenAddress}`;
-    const TTL = 3600; // 1시간
-    
+    const TTL = 3600; // 1 hour
+
     try {
       await redisCache.set(cacheKey, metadata, TTL);
       return true;
@@ -31,16 +31,16 @@ export class CacheManager {
     }
   }
 
-  // 토큰 가격 캐싱 (30초)
+  // Token price caching (30 seconds)
   static async getTokenPrice(tokenAddress: string) {
     const cacheKey = `token:price:${tokenAddress}`;
-    
+
     try {
       const cached = await redisCache.get(cacheKey);
       if (cached) {
         return { data: cached, fromCache: true };
       }
-      
+
       return { data: null, fromCache: false };
     } catch (error) {
       console.error('Cache get error for token price:', error);
@@ -50,8 +50,8 @@ export class CacheManager {
 
   static async setTokenPrice(tokenAddress: string, priceData: any) {
     const cacheKey = `token:price:${tokenAddress}`;
-    const TTL = 30; // 30초
-    
+    const TTL = 30; // 30 seconds
+
     try {
       await redisCache.set(cacheKey, priceData, TTL);
       return true;
@@ -61,16 +61,16 @@ export class CacheManager {
     }
   }
 
-  // 차트 데이터 캐싱 (1분)
+  // Chart data caching (1 minute)
   static async getChartData(tokenAddress: string) {
     const cacheKey = `chart:data:${tokenAddress}`;
-    
+
     try {
       const cached = await redisCache.get(cacheKey);
       if (cached) {
         return { data: cached, fromCache: true };
       }
-      
+
       return { data: null, fromCache: false };
     } catch (error) {
       console.error('Cache get error for chart data:', error);
@@ -80,8 +80,8 @@ export class CacheManager {
 
   static async setChartData(tokenAddress: string, chartData: any) {
     const cacheKey = `chart:data:${tokenAddress}`;
-    const TTL = 60; // 1분
-    
+    const TTL = 60; // 1 minute
+
     try {
       await redisCache.set(cacheKey, chartData, TTL);
       return true;
@@ -91,7 +91,7 @@ export class CacheManager {
     }
   }
 
-  // 채팅방 목록 캐싱 (5분)
+  // Chat room list caching (5 minutes)
   static async getChatRooms() {
     const cacheKey = 'chatrooms:list';
     

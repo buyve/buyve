@@ -34,36 +34,36 @@ interface SendMemoOptions {
 export function useMemo() {
   const { publicKey, signTransaction } = useWalletAdapter();
 
-  // 상태 관리
+  // State management
   const [state, setState] = useState<UseMemoState>({
     isSending: false,
     lastTransaction: null,
     error: null,
   });
 
-  // 에러 클리어
+  // Clear error
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
-  // 메모 메시지 전송
+  // Send memo message
   const sendMemo = useCallback(async (
     type: MessageType,
     content: string,
     options: SendMemoOptions = {}
   ): Promise<MemoTransactionResult> => {
     if (!publicKey) {
-      throw new Error('지갑이 연결되지 않았습니다');
+      throw new Error('Wallet is not connected');
     }
 
     if (!signTransaction) {
-      throw new Error('지갑이 트랜잭션 서명을 지원하지 않습니다');
+      throw new Error('Wallet does not support transaction signing');
     }
 
     try {
       setState(prev => ({ ...prev, isSending: true, error: null }));
 
-      // 메모 메시지 포맷 생성
+      // Create memo message format
       const message = formatMemoMessage(
         type,
         content,
@@ -73,24 +73,24 @@ export function useMemo() {
         options.protocol
       );
 
-      // 메시지 유효성 검증
+      // Validate message
       const validation = validateMemoMessage(message);
       if (!validation.isValid) {
-        throw new Error(`메시지 유효성 검증 실패: ${validation.errors.join(', ')}`);
+        throw new Error(`Message validation failed: ${validation.errors.join(', ')}`);
       }
 
-      // 트랜잭션 생성
+      // Create transaction
       const transaction = createMemoTransaction(message, publicKey);
 
-      // 최신 블록해시 설정
+      // Set latest blockhash
       const stableConnection = await getStableConnection();
       const { blockhash } = await stableConnection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
 
-      // 트랜잭션 서명
+      // Sign transaction
       const signedTransaction = await signTransaction(transaction);
 
-      // 트랜잭션 전송 (재시도 포함)
+      // Send transaction (with retry)
       const signature = await sendMemoTransactionWithRetry(
         stableConnection,
         signedTransaction,
@@ -98,7 +98,7 @@ export function useMemo() {
         options.retryDelay || 1000
       );
 
-      // 트랜잭션 정보 조회
+      // Fetch transaction info
       const txInfo = await stableConnection.getTransaction(signature, {
         commitment: 'confirmed',
         maxSupportedTransactionVersion: 0,
@@ -121,7 +121,7 @@ export function useMemo() {
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '메모 전송에 실패했습니다';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send memo';
       setState(prev => ({
         ...prev,
         isSending: false,
@@ -206,25 +206,25 @@ export function useMemo() {
   }, []);
 
   return {
-    // 상태
+    // State
     isSending: state.isSending,
     lastTransaction: state.lastTransaction,
     error: state.error,
-    
-    // 액션
+
+    // Actions
     sendMemo,
     sendChatMessage,
     sendBuyMessage,
     sendSellMessage,
     clearError,
-    
-    // 유틸리티
+
+    // Utilities
     getMemoFromTransaction,
     parseMessage,
     validateMessage,
     formatMessage,
-    
-    // 상태 확인
+
+    // Status check
     isReady: Boolean(publicKey && signTransaction),
   };
 }

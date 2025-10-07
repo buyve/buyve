@@ -309,7 +309,7 @@ function PCWalletProfile() {
       if (result.success) {
         setTempAvatar(result.avatar_url);
         
-                  // Immediately update profile after upload
+                // Immediately update profile after upload
         await updateProfile({
           nickname: tempNickname,
           avatar: result.avatar_url
@@ -351,17 +351,17 @@ function PCWalletProfile() {
       return avatar;
     }
     
-          // Use first character if nickname exists
+    // Use first character if nickname exists
     if (nickname && nickname.trim()) {
       return nickname.charAt(0).toUpperCase();
     }
-    
-          // Wallet address based fallback
+
+    // Wallet address based fallback
     if (address) {
       return address.slice(2, 4).toUpperCase();
     }
-    
-          // Default avatar
+
+    // Default avatar
     return '👤';
   };
 
@@ -613,33 +613,33 @@ export default function PCNavbar({ showOnAllScreens = false }: PCNavbarProps) {
     <>
       {/* PC-only Navbar - 70px height, no padding */}
       <nav className={`${showOnAllScreens ? 'flex' : 'hidden lg:flex'} fixed top-0 left-0 right-0 z-50 h-[70px] w-full bg-[oklch(23.93%_0_0)] border-b-4 border-black items-center justify-between px-3 sm:px-6`}>
-                  {/* Logo */}
+        {/* Logo */}
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center">
-            <img 
-              src="/landingpage/images/buyve.svg" 
-              alt="Logo" 
+            <img
+              src="/landingpage/images/buyve.svg"
+              alt="Logo"
               className={`${showOnAllScreens ? 'h-[40px] sm:h-[50px]' : 'h-[50px]'} w-auto hover:opacity-80 transition-opacity`}
               style={{ imageRendering: 'crisp-edges' }}
             />
           </Link>
         </div>
 
-                  {/* Central chatroom search */}
+        {/* Central chatroom search */}
         <div className={`flex-1 max-w-md mx-8 ${showOnAllScreens ? 'hidden sm:block' : 'block'}`}>
-          <PCChatRoomSearch 
-            onRoomSelect={handleRoomSelect} 
+          <PCChatRoomSearch
+            onRoomSelect={handleRoomSelect}
             onCreateRoom={handleCreateRoom}
           />
         </div>
 
-                  {/* Right wallet connection */}
+        {/* Right wallet connection */}
         <div className="flex items-center">
           <PCWalletProfile />
         </div>
       </nav>
 
-              {/* Chatroom creation Dialog */}
+      {/* Chatroom creation Dialog */}
       <CreateChatRoomDialog 
         open={isCreateDialogOpen} 
         onOpenChange={setIsCreateDialogOpen} 

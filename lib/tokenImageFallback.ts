@@ -11,12 +11,12 @@ interface JupiterTokenMetadata {
 }
 
 /**
- * Jupiter Token List 캐싱
+ * Jupiter Token List caching
  */
 class JupiterTokenListCache {
   private cache: Map<string, JupiterTokenMetadata> | null = null;
   private lastFetch: number = 0;
-  private ttl: number = 60 * 60 * 1000; // 1시간
+  private ttl: number = 60 * 60 * 1000; // 1 hour
   private fetchPromise: Promise<void> | null = null;
 
   async getToken(tokenAddress: string): Promise<JupiterTokenMetadata | null> {
@@ -26,19 +26,19 @@ class JupiterTokenListCache {
 
   private async ensureCache(): Promise<void> {
     const now = Date.now();
-    
-    // 캐시가 유효한 경우
+
+    // Cache is valid
     if (this.cache && now - this.lastFetch < this.ttl) {
       return;
     }
 
-    // 이미 fetch가 진행 중인 경우
+    // Fetch already in progress
     if (this.fetchPromise) {
       await this.fetchPromise;
       return;
     }
 
-    // 새로운 fetch 시작
+    // Start new fetch
     this.fetchPromise = this.fetchTokenList();
     try {
       await this.fetchPromise;
@@ -49,8 +49,8 @@ class JupiterTokenListCache {
 
   private async fetchTokenList(): Promise<void> {
     try {
-      // Jupiter API 엔드포인트 변경: quote-api.jup.ag → lite-api.jup.ag
-      // Solana token registry를 fallback으로 사용
+      // Jupiter API endpoint changed: quote-api.jup.ag → lite-api.jup.ag
+      // Use Solana token registry as fallback
       const response = await fetch('https://cdn.jsdelivr.net/gh/solana-labs/token-list@main/src/tokens/solana.tokenlist.json');
       if (!response.ok) throw new Error('Failed to fetch token list');
 
@@ -65,17 +65,17 @@ class JupiterTokenListCache {
       this.lastFetch = Date.now();
     } catch (error) {
       console.error('Failed to fetch token list:', error);
-      // 빈 캐시 설정하여 반복 실패 요청 방지
+      // Set empty cache to prevent repeated failed requests
       this.cache = new Map();
     }
   }
 }
 
-// 싱글톤 인스턴스
+// Singleton instance
 export const jupiterTokenListCache = new JupiterTokenListCache();
 
 /**
- * 다양한 소스에서 토큰 이미지 조회 (캐싱 적용)
+ * Fetch token image from various sources (with caching)
  */
 export async function fetchTokenImageWithFallbacks(
   tokenAddress: string,
@@ -83,18 +83,18 @@ export async function fetchTokenImageWithFallbacks(
 ): Promise<string[]> {
   const sources: string[] = [];
 
-  // 1. 제공된 이미지 URL이 유효한 경우
+  // 1. Provided image URL is valid
   if (providedImageUrl && providedImageUrl.startsWith('http')) {
     sources.push(providedImageUrl);
   }
 
-  // 2. 캐시된 메타데이터 확인
+  // 2. Check cached metadata
   const cachedMetadata = tokenMetadataCache.get(tokenAddress);
   if (cachedMetadata?.image) {
     sources.push(cachedMetadata.image);
   }
 
-  // 3. Jupiter Token List (캐싱됨)
+  // 3. Jupiter Token List (cached)
   const jupiterToken = await jupiterTokenListCache.getToken(tokenAddress);
   if (jupiterToken?.logoURI) {
     sources.push(jupiterToken.logoURI);

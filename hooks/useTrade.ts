@@ -16,12 +16,10 @@ export function useTrade() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 거래 설정 업데이트
   const updateSettings = useCallback((updates: Partial<TradeSettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // 거래 실행
   const executeTrade = useCallback(async (
     roomId: string, 
     messageContent: string,
@@ -30,7 +28,7 @@ export function useTrade() {
     const tradeSettings = { ...settings, ...overrideSettings };
     
     if (!tradeSettings.amount || parseFloat(tradeSettings.amount) <= 0) {
-      setError('올바른 거래 수량을 입력해주세요.');
+      setError('Please enter a valid trade amount.');
       return;
     }
 
@@ -38,15 +36,6 @@ export function useTrade() {
     setError(null);
 
     try {
-      // TODO: 실제 DEX 거래 실행 로직
-      // const tradeParams = {
-      //   type: tradeSettings.mode,
-      //   amount: tradeSettings.amount,
-      //   slippage: tradeSettings.slippage,
-      //   priorityFee: tradeSettings.priorityFee,
-      // };
-
-      // Mock 거래 실행
       const execution: TradeExecution = {
         id: Date.now().toString(),
         userId: 'current-user',
@@ -62,7 +51,6 @@ export function useTrade() {
 
       setExecutions(prev => [execution, ...prev]);
 
-      // 거래 확인 시뮬레이션 (실제로는 블록체인 이벤트 리스닝)
       setTimeout(() => {
         setExecutions(prev => 
           prev.map(exec => 
@@ -75,7 +63,7 @@ export function useTrade() {
 
       return execution;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '거래 실행에 실패했습니다.';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to execute trade.';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -83,34 +71,25 @@ export function useTrade() {
     }
   }, [settings]);
 
-  // 프리셋 설정
   const setPreset = useCallback((preset: string) => {
     setSettings(prev => ({ ...prev, amount: preset }));
   }, []);
 
-  // 거래 모드 변경
   const toggleMode = useCallback(() => {
-    setSettings(prev => ({ 
-      ...prev, 
+    setSettings(prev => ({
+      ...prev,
       mode: prev.mode === 'buy' ? 'sell' : 'buy',
-      amount: '' // 모드 변경 시 수량 초기화
+      amount: ''
     }));
   }, []);
 
-  // 거래 내역 조회
   const fetchTradeHistory = useCallback(async (limit = 50) => {
     try {
-      // TODO: 실제 API 호출
-      // const response = await fetch(`/api/trades?limit=${limit}`);
-      // const data = await response.json();
-      
-      // Mock 데이터는 이미 설정됨
     } catch (err) {
-      setError(err instanceof Error ? err.message : '거래 내역 조회에 실패했습니다.');
+      setError(err instanceof Error ? err.message : 'Failed to fetch trade history.');
     }
   }, [executions]);
 
-  // 설정 저장/로드 (localStorage)
   const saveSettings = useCallback(() => {
     try {
       localStorage.setItem('tradeSettings', JSON.stringify(settings));
@@ -129,28 +108,27 @@ export function useTrade() {
     }
   }, []);
 
-  // 유효성 검사
   const validateSettings = useCallback(() => {
     const errors: string[] = [];
 
     if (!settings.amount || parseFloat(settings.amount) <= 0) {
-      errors.push('올바른 거래 수량을 입력해주세요.');
+      errors.push('Please enter a valid trade amount.');
     }
 
     if (settings.mode === 'buy' && parseFloat(settings.amount) > 100) {
-      errors.push('SOL 거래 수량이 너무 큽니다.');
+      errors.push('SOL trade amount is too large.');
     }
 
     if (settings.mode === 'sell' && (parseFloat(settings.amount) < 1 || parseFloat(settings.amount) > 100)) {
-      errors.push('매도 비율은 1-100% 사이여야 합니다.');
+      errors.push('Sell percentage must be between 1-100%.');
     }
 
     if (parseFloat(settings.slippage) < 0.1 || parseFloat(settings.slippage) > 50) {
-      errors.push('슬리피지는 0.1-50% 사이여야 합니다.');
+      errors.push('Slippage must be between 0.1-50%.');
     }
 
     if (parseFloat(settings.priorityFee) < 0 || parseFloat(settings.priorityFee) > 1) {
-      errors.push('프라이어리티 수수료는 0-1 SOL 사이여야 합니다.');
+      errors.push('Priority fee must be between 0-1 SOL.');
     }
 
     return {
@@ -159,12 +137,10 @@ export function useTrade() {
     };
   }, [settings]);
 
-  // 초기 설정 로드
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
 
-  // 거래 내역 초기 로드
   useEffect(() => {
     fetchTradeHistory();
   }, [fetchTradeHistory]);
