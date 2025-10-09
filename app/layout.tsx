@@ -31,11 +31,20 @@ export const metadata = {
     description: 'Buy the Buyve. Keep the Buyve',
     type: 'website',
     locale: 'en_US',
+    images: [
+      {
+        url: '/buyvepfp.png',
+        width: 8192,
+        height: 8192,
+        alt: 'Buyve',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Buyve',
     description: 'Buy the Buyve. Keep the Buyve',
+    images: ['/buyvepfp.png'],
   },
 };
 
