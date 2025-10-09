@@ -1191,12 +1191,13 @@
 }
 
 body {
-  background-color: var(--white);
+  background-color: #000;
   color: var(--main-color);
   font-family: Instrument Sans, sans-serif;
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
+  overflow-x: hidden;
 }
 
 h1 {
@@ -1294,6 +1295,9 @@ figcaption {
 .page-content {
   background-color: var(--white);
   position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .subhead {
@@ -3192,9 +3196,10 @@ figcaption {
   justify-content: flex-end;
   align-items: stretch;
   min-height: 50vh;
-  padding: 50px 3% 30px;
+  padding: 30px 3% 30px;
   display: flex;
   position: relative;
+  margin-top: auto;
 }
 
 .button-line {
@@ -3958,7 +3963,7 @@ figcaption {
 
   .footer {
     min-height: auto;
-    padding-top: 120px;
+    padding-top: 30px;
     padding-bottom: 30px;
   }
 

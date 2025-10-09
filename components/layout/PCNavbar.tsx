@@ -619,7 +619,7 @@ export default function PCNavbar({ showOnAllScreens = false }: PCNavbarProps) {
             <img
               src="/landingpage/images/buyve.svg"
               alt="Logo"
-              className={`${showOnAllScreens ? 'h-[40px] sm:h-[50px]' : 'h-[50px]'} w-auto hover:opacity-80 transition-opacity`}
+              className={`${showOnAllScreens ? 'h-[30px] sm:h-[30px]' : 'h-[30px]'} w-auto hover:opacity-80 transition-opacity`}
               style={{ imageRendering: 'crisp-edges' }}
             />
           </Link>
