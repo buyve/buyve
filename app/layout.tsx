@@ -10,21 +10,32 @@ import CryptoPolyfill from '@/components/CryptoPolyfill';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'TradeChat - Decentralized Trading with Real-time Chat',
-  description: 'Trade, chat, and connect on Solana. The future of decentralized trading with real-time community insights.',
+  title: 'Buyve',
+  description: 'Buy the Buyve. Keep the Buyve',
   keywords: ['trading', 'crypto', 'solana', 'defi', 'chat', 'blockchain', 'decentralized'],
-  authors: [{ name: 'TradeChat Team' }],
+  authors: [{ name: 'Buyve Team' }],
   themeColor: '#1e293b',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  manifest: '/site.webmanifest',
   openGraph: {
-    title: 'TradeChat - Decentralized Trading Platform',
-    description: 'Trade, chat, and connect on Solana with real-time community insights.',
+    title: 'Buyve',
+    description: 'Buy the Buyve. Keep the Buyve',
     type: 'website',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TradeChat - Decentralized Trading Platform',
-    description: 'Trade, chat, and connect on Solana with real-time community insights.',
+    title: 'Buyve',
+    description: 'Buy the Buyve. Keep the Buyve',
   },
 };
 
