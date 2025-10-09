@@ -270,11 +270,11 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
                   onChange={(e) => setRoomName(e.target.value)}
                   placeholder="e.g., SOL/USDC Trading Room"
                   className="neobrutalism-input"
-                  maxLength={50}
+                  maxLength={20}
                   disabled={isLoading}
                 />
                 <p className="text-xs text-muted-foreground">
-  {roomName.length}/50 characters
+  {roomName.length}/20 characters
                 </p>
               </div>
 
