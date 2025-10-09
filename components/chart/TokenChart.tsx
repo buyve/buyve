@@ -136,21 +136,10 @@ export default function TokenChart({ tokenAddress, className = '' }: TokenChartP
 
                     return (
                       <div className="bg-black/90 text-white border border-gray-600 rounded-lg shadow-xl p-3 text-xs backdrop-blur-sm">
-                        <p className="font-medium text-gray-200 mb-1">TIME: {data.fullTime}</p>
-                        <div className="space-y-1">
-                          <p className="font-bold text-white text-sm">
-                            Open: ${openPrice.toFixed(6)}
-                          </p>
-                          <p className="text-green-400 text-xs">
-                            High: ${data.high.toFixed(6)}
-                          </p>
-                          <p className="text-red-400 text-xs">
-                            Low: ${data.low.toFixed(6)}
-                          </p>
-                          <p className="text-blue-400 text-xs">
-                            Close: ${data.close.toFixed(6)}
-                          </p>
-                        </div>
+                        <p className="font-medium text-gray-200 mb-1">{data.fullTime}</p>
+                        <p className="font-bold text-white text-sm">
+                          ${openPrice.toFixed(6)}
+                        </p>
                       </div>
                     );
                   }

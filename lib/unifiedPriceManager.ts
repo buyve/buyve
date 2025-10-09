@@ -336,12 +336,14 @@ class UnifiedPriceManager {
         low: item.low_price as number,
         close: item.close_price as number,
         price: item.close_price as number,
-        time: date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-        fullTime: date.toLocaleString('ko-KR', {
-          month: 'numeric',
+        time: date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }),
+        fullTime: date.toLocaleString(undefined, {
           day: 'numeric',
+          month: 'numeric',
+          year: 'numeric',
           hour: '2-digit',
-          minute: '2-digit'
+          minute: '2-digit',
+          hour12: false
         })
       };
     });
