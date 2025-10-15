@@ -26,7 +26,7 @@ interface TradeSettingsContextType {
 const defaultSettings: TradeSettings = {
   mode: 'buy',
   quantity: '',
-  slippage: '1',
+  slippage: '20',
   priorityFee: '0.001',
   selectedToken: null,
 };

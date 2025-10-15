@@ -31,8 +31,8 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   
   // PC version preset settings
-  const [presetSlippage, setPresetSlippage] = useState('30');
-  const [presetPriority, setPresetPriority] = useState('0.0001');
+  const [presetSlippage, setPresetSlippage] = useState('20');
+  const [presetPriority, setPresetPriority] = useState('0.001');
 
   // Get currently selected token info from TradeSettingsContext
   const currentTokenAddress = settings.selectedToken?.contractAddress || 'So11111111111111111111111111111111111111112'; // SOL default
@@ -70,8 +70,8 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
       if (result.success && result.settings) {
         setBuyPresets(result.settings.buy_presets || ['0.1', '1', '3', '10']);
         setSellPresets(result.settings.sell_presets || ['10', '25', '50', '100']);
-        const slippage = result.settings.slippage || '30';
-        const priorityFee = result.settings.priority_fee || '0.0001';
+        const slippage = result.settings.slippage || '20';
+        const priorityFee = result.settings.priority_fee || '0.001';
         setPresetSlippage(slippage);
         setPresetPriority(priorityFee);
         // Update TradeSettingsContext with loaded values
