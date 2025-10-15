@@ -8,7 +8,6 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // 폰트 패밀리 설정
       fontFamily: {
         'sans': ['"Satoshi"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
         'satoshi': ['"Satoshi"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
@@ -16,9 +15,7 @@ module.exports = {
         'bitcount': ['"Bitcount Grid Double"', 'system-ui'],
       },
       
-      // 커스텀 컬러 팔레트
       colors: {
-        // 기존 CSS 변수들을 Tailwind에서도 사용
         main: 'var(--color-main)',
         background: 'var(--color-background)',
         'secondary-background': 'var(--color-secondary-background)',
@@ -27,7 +24,6 @@ module.exports = {
         border: 'var(--color-border)',
         ring: 'var(--color-ring)',
         
-        // 차트 컬러들
         chart: {
           1: 'var(--color-chart-1)',
           2: 'var(--color-chart-2)',
@@ -36,7 +32,6 @@ module.exports = {
           5: 'var(--color-chart-5)',
         },
         
-        // 추가 컬러 팔레트 (필요시)
         primary: {
           50: '#f0fdfa',
           100: '#ccfbf1',
@@ -52,38 +47,32 @@ module.exports = {
         }
       },
       
-      // 커스텀 박스 섀도우 (네오브루탈리즘용)
       boxShadow: {
         'neo': 'var(--shadow-shadow)',
         'neo-hover': '6px 6px 0px 0px var(--color-border)',
         'neo-active': '2px 2px 0px 0px var(--color-border)',
       },
       
-      // 커스텀 보더 라디우스
       borderRadius: {
         'neo': 'var(--radius-base)',
       },
       
-      // 커스텀 폰트 웨이트
       fontWeight: {
         'base': 'var(--font-weight-base)',
         'heading': 'var(--font-weight-heading)',
       },
       
-      // 애니메이션
       animation: {
         'bounce-gentle': 'bounce 2s infinite',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
       
-      // 간격 시스템
       spacing: {
         'neo-shadow': '4px',
       }
     },
   },
   plugins: [
-    // 커스텀 플러그인 추가 가능
     function({ addUtilities }) {
       const newUtilities = {
         '.neo-card': {
