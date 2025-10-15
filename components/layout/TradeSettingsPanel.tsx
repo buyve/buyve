@@ -327,11 +327,11 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
           
           <DrawerContent>
             <DrawerHeader>
-              <DrawerTitle>Advanced Settings</DrawerTitle>
+              <DrawerTitle className="text-white">Advanced Settings</DrawerTitle>
             </DrawerHeader>
             <div className="p-4 space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Slippage (%)</label>
+                <label className="text-sm font-medium mb-2 block text-white">Slippage (%)</label>
                 <Input
                   value={settings.slippage}
                   onChange={(e) => {
@@ -344,7 +344,7 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Priority Fee</label>
+                <label className="text-sm font-medium mb-2 block text-white">Priority Fee</label>
                 <Input
                   value={settings.priorityFee}
                   onChange={(e) => {
