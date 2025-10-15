@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// 🎯 Rate Limiting 설정
 const RATE_LIMIT_CONFIG = {
-  windowMs: 60 * 1000, // 1분 윈도우
+  windowMs: 60 * 1000, 
   maxRequests: {
-    general: 100,        // 일반 API: 분당 100개
-    priceUpdate: 60,     // 가격 업데이트: 분당 60개 (1분 간격 데이터를 위해 증가)
-    websocket: 200,      // WebSocket: 분당 200개
-    auth: 30             // 인증: 분당 30개
+    general: 100,        
+    priceUpdate: 60,      
+    websocket: 200,      
+    auth: 30             
   }
 };
 
@@ -28,19 +27,16 @@ function getEndpointCategory(pathname: string): keyof typeof RATE_LIMIT_CONFIG.m
     return 'websocket';
   }
   if (pathname.includes('/api/rpc-stats') || pathname.includes('/api/solana-rpc')) {
-    return 'priceUpdate'; // Use same limit as price updates for RPC-related endpoints
+    return 'priceUpdate';
   }
   return 'general';
 }
 
-// Rate limiting is disabled in Edge Runtime due to Redis incompatibility
-// Will be handled at the API route level instead
 function checkRateLimit(ip: string, category: keyof typeof RATE_LIMIT_CONFIG.maxRequests): {
   allowed: boolean;
   remaining: number;
   resetTime: number;
 } {
-  // Always allow in middleware - actual rate limiting will be done in API routes
   return {
     allowed: true,
     remaining: RATE_LIMIT_CONFIG.maxRequests[category],
@@ -51,7 +47,6 @@ function checkRateLimit(ip: string, category: keyof typeof RATE_LIMIT_CONFIG.max
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // API 라우트에만 Rate Limiting 적용
   if (pathname.startsWith('/api/')) {
     const ip = getRateLimitKey(request);
     const category = getEndpointCategory(pathname);
@@ -59,7 +54,6 @@ export function middleware(request: NextRequest) {
     try {
       const rateLimit = checkRateLimit(ip, category);
       
-      // Rate Limit 헤더 추가
       const response = rateLimit.allowed 
         ? NextResponse.next()
         : NextResponse.json(
@@ -82,7 +76,6 @@ export function middleware(request: NextRequest) {
       return response;
     } catch (error) {
       console.error('Rate limiting error, allowing request:', error);
-      // Rate limiting 에러 시 요청 허용
       return NextResponse.next();
     }
   }
