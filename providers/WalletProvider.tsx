@@ -5,6 +5,12 @@ import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
+import { BackpackWalletAdapter } from '@solana/wallet-adapter-backpack';
+import { CoinbaseWalletAdapter } from '@solana/wallet-adapter-coinbase';
+import { LedgerWalletAdapter } from '@solana/wallet-adapter-ledger';
+import { TorusWalletAdapter } from '@solana/wallet-adapter-torus';
+import { MathWalletAdapter } from '@solana/wallet-adapter-mathwallet';
+import { SlopeWalletAdapter } from '@solana/wallet-adapter-slope';
 import { clusterApiUrl } from '@solana/web3.js';
 import { WalletProvider as CustomWalletProvider } from '@/contexts/WalletContext';
 
@@ -61,9 +67,15 @@ export default function WalletProviderWrapper({ children }: WalletProviderWrappe
 
     const wallets = useMemo(
         () => [
-            // Phantom is automatically registered as Standard Wallet, so removed
+            // Phantom and Magic Eden are automatically registered as Standard Wallet
             // new PhantomWalletAdapter(),
             new SolflareWalletAdapter(),
+            new BackpackWalletAdapter(),
+            new CoinbaseWalletAdapter(),
+            new LedgerWalletAdapter(),
+            new TorusWalletAdapter(),
+            new MathWalletAdapter(),
+            new SlopeWalletAdapter(),
         ],
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [network]
