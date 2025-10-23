@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -578,19 +579,16 @@ export default function MobilePutter() {
     <>
       <footer className="mobile-putter">
         {/* Logo */}
-        <button 
-          className="relative flex items-center justify-center bg-transparent h-full px-3 py-2 border-none outline-none"
-          style={{ boxShadow: 'none', border: 'none', background: 'transparent' }}
-        >
-          <img 
-            src="/landingpage/images/buyve2.svg" 
-            alt="Logo" 
-            className="w-8 h-8"
-            style={{ 
+        <Link href="/" className="relative flex items-center justify-center bg-transparent h-full px-3 py-2">
+          <img
+            src="/landingpage/images/buyve2.svg"
+            alt="Logo"
+            className="w-8 h-8 hover:opacity-80 transition-opacity"
+            style={{
               imageRendering: 'crisp-edges'
             }}
           />
-        </button>
+        </Link>
 
         {/* Search */}
         <button 

@@ -22,7 +22,7 @@ class ConnectionPool {
   constructor(config?: Partial<PoolConfig>) {
     this.config = {
       maxSize: config?.maxSize || 10,
-      rpcUrl: config?.rpcUrl || process.env.NEXT_PUBLIC_RPC_URL || 'https://solana-mainnet.g.alchemy.com/v2/***REMOVED_ALCHEMY_KEY***',
+      rpcUrl: config?.rpcUrl || process.env.NEXT_PUBLIC_RPC_URL || 'https://solana-mainnet.g.alchemy.com/v2/CLIspK_3J2GVAuweafRIUoHzWjyn07rz',
       commitment: config?.commitment || 'confirmed',
     };
   }

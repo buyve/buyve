@@ -153,7 +153,7 @@ export default function ChatInput({ roomId }: Props) {
 
     // Server environment (fallback)
     return new Connection(
-      process.env.NEXT_PUBLIC_RPC_URL || 'https://solana-mainnet.g.alchemy.com/v2/***REMOVED_ALCHEMY_KEY***',
+      process.env.NEXT_PUBLIC_RPC_URL || 'https://solana-mainnet.g.alchemy.com/v2/CLIspK_3J2GVAuweafRIUoHzWjyn07rz',
       {
         commitment: 'confirmed',
         confirmTransactionInitialTimeout: 90000,

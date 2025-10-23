@@ -6,8 +6,8 @@ export type SolanaNetwork = 'mainnet' | 'devnet' | 'testnet';
 const getMainnetRpcEndpoints = () => {
   const customRpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
   const baseEndpoints = [
-    'https://mainnet.helius-rpc.com/?api-key=***REMOVED_HELIUS_KEY***', // Helius dedicated RPC
-    'https://solana-mainnet.g.alchemy.com/v2/***REMOVED_ALCHEMY_KEY***', // Alchemy RPC (priority)
+    'https://mainnet.helius-rpc.com/?api-key=d0c461b2-279b-41ed-9a00-93952a97afd0', // Helius dedicated RPC
+    'https://solana-mainnet.g.alchemy.com/v2/CLIspK_3J2GVAuweafRIUoHzWjyn07rz', // Alchemy RPC (priority)
     'https://rpc.ankr.com/solana', // Ankr
     'https://mainnet.rpcpool.com', // RPC Pool
     'https://api.mainnet-beta.solana.com', // Official RPC (backup)

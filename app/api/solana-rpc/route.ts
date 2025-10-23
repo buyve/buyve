@@ -147,7 +147,7 @@ function getPreferredEndpoint(): string | null {
   // 블랙리스트에 없는 엔드포인트 찾기
   for (let i = 0; i < RPC_ENDPOINTS.length; i++) {
     const endpoint = RPC_ENDPOINTS[(currentEndpointIndex + i) % RPC_ENDPOINTS.length];
-    if (!isBlacklisted(endpoint)) {
+    if (endpoint && !isBlacklisted(endpoint)) {
       currentEndpointIndex = (currentEndpointIndex + i) % RPC_ENDPOINTS.length;
       return endpoint;
     }
@@ -311,7 +311,7 @@ async function makeRpcRequest(body: unknown, retryCount = 0): Promise<unknown> {
     // 재시도: 순서대로 시도하되 블랙리스트 체크
     for (let i = 0; i < RPC_ENDPOINTS.length; i++) {
       const testEndpoint = RPC_ENDPOINTS[(currentEndpointIndex + i) % RPC_ENDPOINTS.length];
-      if (!isBlacklisted(testEndpoint)) {
+      if (testEndpoint && !isBlacklisted(testEndpoint)) {
         endpoint = testEndpoint;
         currentEndpointIndex = (currentEndpointIndex + i) % RPC_ENDPOINTS.length;
         break;
@@ -329,10 +329,11 @@ async function makeRpcRequest(body: unknown, retryCount = 0): Promise<unknown> {
     await new Promise(resolve => setTimeout(resolve, delay));
   }
   
+  let alreadyBlacklisted = false;
+
   try {
     requestCount++;
-    let alreadyBlacklisted = false;
-    
+
     // 타임아웃 10초로 단축 (빠른 실패)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
