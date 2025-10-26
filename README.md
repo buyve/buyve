@@ -10,7 +10,7 @@
 [![Jupiter](https://img.shields.io/badge/Jupiter-DEX-00D4AA?style=for-the-badge)](https://jup.ag/)
 [![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](LICENSE)
 
-[Live Demo](https://buyve.app) • [Documentation](#usage-guide) • [Report Bug](#support)
+[Live Demo](https://buyve.fun) • [Documentation](#usage-guide) • [Report Bug](#support)
 
 </div>
 
@@ -363,8 +363,8 @@ Transform how you support creators. Own the moment. Share the vibe.
 
 <br>
 
-[![Start Trading](https://img.shields.io/badge/🚀_Start_Trading-Visit_Buyve-blueviolet?style=for-the-badge&labelColor=000000)](https://buyve.app/trade)
-[![Create Chat Room](https://img.shields.io/badge/💬_Create_Chat-For_Creators-success?style=for-the-badge&labelColor=000000)](https://buyve.app/trade)
+[![Start Trading](https://img.shields.io/badge/🚀_Start_Trading-Visit_Buyve-blueviolet?style=for-the-badge&labelColor=000000)](https://buyve.fun/trade)
+[![Create Chat Room](https://img.shields.io/badge/💬_Create_Chat-For_Creators-success?style=for-the-badge&labelColor=000000)](https://buyve.fun/trade)
 
 <br>
 
