@@ -1,32 +1,101 @@
-# Buyve - Solana Trading & Social Platform
+# Buyve - Don't Send Tips. Buy It. Feel the Vibe.
 
-A real-time decentralized trading platform that combines token trading with social chat rooms on the Solana blockchain.
+<div align="center">
+
+**Reimagining the creator economy on Solana. A blockchain-powered platform that transforms how fans support content creators through tokenized engagement.**
+
+[![Next.js](https://img.shields.io/badge/Next.js-15.3.2-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Solana](https://img.shields.io/badge/Solana-Mainnet-14F195?style=for-the-badge&logo=solana)](https://solana.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Jupiter](https://img.shields.io/badge/Jupiter-DEX-00D4AA?style=for-the-badge)](https://jup.ag/)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](LICENSE)
+
+[Live Demo](https://buyve.app) • [Documentation](#usage-guide) • [Report Bug](#support)
+
+</div>
+
+---
 
 ## Overview
 
-Buyve is a Next.js-based web application that enables users to trade Solana tokens while participating in token-specific chat rooms. Built with Jupiter DEX aggregation for optimal trade execution and Supabase for real-time messaging, Buyve creates a seamless trading experience where community discussion and trading happen in one place.
+Buyve isn't about just giving tips anymore. We're revolutionizing the $100B global live streaming industry by replacing traditional tipping with on-chain token ownership. Streamers create their own coins, and fans buy them to share the vibe, trigger reactions, and drop messages.
+
+Built on Solana with Jupiter DEX integration and real-time messaging, Buyve bridges the gap between the $13B fan economy and decentralized finance, creating a new paradigm where supporting your favorite creator means becoming a stakeholder in their success.
+
+### The Vision: Internet Capital Market
+
+Transform the traditional live streaming platforms (YouTube, Twitch, OnlyFans, Kick, Instagram Live, and more) by introducing a creator-owned token economy. Every message, every interaction, every moment of support becomes an on-chain asset that fans can own, trade, and cherish.
+
+## How It Works
+
+<div align="center">
+
+### Three Simple Steps to Transform Creator Support
+
+</div>
+
+| Step | Action | Description |
+|------|--------|-------------|
+| **1️⃣ Create** | **Launch Your Token** | Streamers and content creators launch their own tokens using existing launchpads:<br>• [pump.fun](https://pump.fun) - Launch memecoins in seconds<br>• [bonk.fun](https://bonk.fun) - Create community tokens<br>• [studio.jup.ag](https://studio.jup.ag) - Jupiter Token Studio<br>• [believe.app](https://believe.app) - Professional token launches<br><br>*We don't offer coin creation because there are already plenty of great launchpads out there.* |
+| **2️⃣ Add** | **Register Chat Room** | Register your token's chat room on Buyve:<br>• One chat box per token (first come, first served)<br>• Doesn't have to be added by the coin creator<br>• Perfect for Streamers, YouTubers, KOLs, and CTOs<br>• Embeddable chat widgets for live streams (coming soon) |
+| **3️⃣ Buy** | **Token = Message Access** | Fans buy your token to participate:<br>• **It's no longer just about sending tips**<br>• Token ownership = Message access + Community membership<br>• Every interaction is recorded on-chain<br>• Fans become stakeholders in the creator's success |
 
 ## Key Features
 
-### Trading
-- **Jupiter DEX Integration** - Access the best prices across Solana DEXs through Jupiter aggregation
+### For Creators
+- **Tokenized Fan Economy** - Monetize your community through token ownership
+- **Real-Time Engagement** - Instant chat rooms tied to your token
+- **On-Chain Interactions** - All messages and trades recorded permanently on Solana
+- **Multiple Platform Support** - Works across YouTube, Twitch, Kick, and more
+- **Customizable Chat Rooms** - Brand your space with token images and descriptions
+
+### For Fans
+- **Own What You Support** - Buy tokens instead of sending disposable tips
+- **Trade & Speculate** - Token values fluctuate based on creator popularity
+- **Jupiter DEX Integration** - Best prices across all Solana DEXs
 - **Multi-Wallet Support** - Compatible with 8+ Solana wallets (Phantom, Solflare, Backpack, Ledger, etc.)
-- **Customizable Trading Settings** - Configure slippage tolerance, priority fees, and preset trade amounts
 - **Real-Time Price Tracking** - Live token price updates with OHLC chart data
-- **Transaction Memos** - Automated on-chain message recording with each trade
+- **Customizable Trading** - Configure slippage tolerance, priority fees, and preset trade amounts
 
-### Social
-- **Token Chat Rooms** - Create and join chat rooms for specific tokens
+### Technical Excellence
+- **Lightning-Fast Trading** - Powered by Solana's high-performance blockchain
+- **Secure Authentication** - Wallet-based JWT authentication with signature verification
 - **Real-Time Messaging** - Instant message delivery using Supabase Realtime
-- **User Profiles** - Customizable profiles with avatars, nicknames, and bios
-- **Trade Announcements** - Automatic trade notifications in chat rooms
-- **Message History** - Persistent message storage with 24-hour retention
-
-### Security
-- **Wallet Authentication** - JWT-based authentication with signature verification
-- **Rate Limiting** - API protection with configurable rate limits
+- **Transaction Memos** - Automated on-chain message recording with each trade
+- **Rate Limited APIs** - Enterprise-grade protection and performance
 - **RPC Proxy** - Secure Solana RPC access through internal proxy
-- **Transaction Simulation** - Pre-execution validation for safer trading
+
+## Market Opportunity
+
+<div align="center">
+
+### The Numbers Don't Lie
+
+| Metric | Value |
+|--------|-------|
+| 🌍 **Global Live Streaming Market** | $100 Billion |
+| 📹 **Global Live Streamers** | 10 Million+ |
+| 💰 **Fan Economy** | $13 Billion |
+
+</div>
+
+### Target Platforms
+
+<div align="center">
+
+We're not building just another live streaming platform. **We're building the infrastructure layer.**
+
+| Category | Platforms |
+|----------|-----------|
+| 🎮 **Gaming Streaming** | YouTube Live, Twitch, Kick |
+| 🌏 **Regional Platforms** | Bilibili, AfreecaTV, BIGO Live |
+| 💎 **Creator Subscriptions** | OnlyFans, Fansly, Fanvue |
+| 🎨 **Creator Support** | Patreon, Ko-fi, Buy Me a Coffee |
+| 📱 **Social Media Live** | Instagram Live, Facebook Live, TikTok Live |
+
+</div>
+
+> *"We're not building just another live streaming messaging platform. Imagine streamers interacting with the 'physical things' on-chain. Big things are coming. Soon."*
 
 ## Tech Stack
 
@@ -51,131 +120,6 @@ Buyve is a Next.js-based web application that enables users to trade Solana toke
 - **Real-time:** Supabase Realtime subscriptions
 - **Authentication:** JWT with wallet signature verification
 - **API Routes:** Next.js API routes with middleware
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 20+ and npm
-- A Solana RPC endpoint (e.g., Helius, QuickNode, or public RPC)
-- A Supabase project with PostgreSQL database
-- JWT secret for token signing
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd buyve
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Set up environment variables:
-
-Create a `.env.local` file in the root directory:
-
-```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-# Solana Configuration
-NEXT_PUBLIC_RPC_URL=your_solana_rpc_endpoint
-NEXT_PUBLIC_SOLANA_NETWORK=mainnet
-NEXT_PUBLIC_MEMO_PROGRAM_ID=MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr
-
-# Authentication
-JWT_SECRET=your_jwt_secret_key
-
-# Optional
-NEXT_PUBLIC_SERVER_URL=http://localhost:3000
-```
-
-4. Set up the database:
-
-Run the SQL migrations in your Supabase project to create the required tables:
-
-```sql
--- Create chat_rooms table
-CREATE TABLE chat_rooms (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  image TEXT,
-  token_address TEXT UNIQUE NOT NULL,
-  created_by TEXT NOT NULL,
-  member_count INTEGER DEFAULT 0,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create message_cache table
-CREATE TABLE message_cache (
-  signature TEXT PRIMARY KEY,
-  token_address TEXT NOT NULL,
-  sender_wallet TEXT NOT NULL,
-  message_type TEXT CHECK (message_type IN ('BUY', 'SELL', 'CHAT')),
-  content TEXT,
-  quantity DOUBLE PRECISION,
-  price DOUBLE PRECISION,
-  block_time TIMESTAMP WITH TIME ZONE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create token_price_history table
-CREATE TABLE token_price_history (
-  id SERIAL PRIMARY KEY,
-  token_address TEXT NOT NULL,
-  price DOUBLE PRECISION NOT NULL,
-  open_price DOUBLE PRECISION,
-  high_price DOUBLE PRECISION,
-  low_price DOUBLE PRECISION,
-  close_price DOUBLE PRECISION,
-  volume DOUBLE PRECISION DEFAULT 0,
-  timestamp_1min TIMESTAMP WITH TIME ZONE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create profiles table
-CREATE TABLE profiles (
-  wallet_address TEXT PRIMARY KEY,
-  nickname TEXT,
-  avatar TEXT,
-  bio TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create trading_settings table
-CREATE TABLE trading_settings (
-  wallet_address TEXT PRIMARY KEY,
-  buy_presets DOUBLE PRECISION[] DEFAULT ARRAY[0.1, 0.5, 1.0, 5.0],
-  sell_presets DOUBLE PRECISION[] DEFAULT ARRAY[25, 50, 75, 100],
-  slippage TEXT DEFAULT '20',
-  priority_fee TEXT DEFAULT '0.001',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create indexes for performance
-CREATE INDEX idx_message_cache_token ON message_cache(token_address);
-CREATE INDEX idx_message_cache_block_time ON message_cache(block_time DESC);
-CREATE INDEX idx_token_price_history_token ON token_price_history(token_address);
-CREATE INDEX idx_token_price_history_timestamp ON token_price_history(timestamp_1min DESC);
-```
-
-5. Start the development server:
-```bash
-npm run dev
-```
-
-6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Structure
 
@@ -221,45 +165,60 @@ buyve/
     └── window.d.ts          # Window extensions
 ```
 
-## Usage
+## Usage Guide
 
-### Connect Your Wallet
+### For Content Creators
 
+#### Step 1: Launch Your Token
+1. Choose your preferred launchpad (pump.fun, bonk.fun, studio.jup.ag, or believe.app)
+2. Create your creator token with your brand identity
+3. Set initial supply and distribution
+
+#### Step 2: Register Your Chat Room on Buyve
+1. Visit [Buyve](https://buyve.fun) and connect your wallet
+2. Click the "+" button to create a new chat room
+3. Enter your token's contract address
+4. Customize with name, description, and branding
+5. Your fans can now buy your token to message and engage
+
+#### Step 3: Embed Chat Widget (Coming Soon)
+- Integrate Buyve chat into your live streams
+- Works across YouTube, Twitch, and other platforms
+- Fans interact directly through the embedded widget
+
+### For Fans & Supporters
+
+#### Connect Your Wallet
 1. Click "Connect Wallet" in the top navigation
-2. Select your preferred Solana wallet from the list
-3. Approve the connection request in your wallet
-4. Sign the authentication message to verify ownership
+2. Select your preferred Solana wallet (Phantom, Solflare, etc.)
+3. Approve the connection and sign the authentication message
 
-### Join a Chat Room
-
-1. Browse available token chat rooms in the left sidebar
-2. Search for specific tokens using the search bar
-3. Click on a chat room to join
-4. View real-time messages and trade activity
-
-### Trade Tokens
-
-1. Select a token chat room
-2. Open the trade panel on the right side
-3. Choose "Buy" or "Sell" mode
-4. Enter the amount or select a preset
-5. Adjust slippage tolerance and priority fee if needed
-6. Review the quote and estimated price
+#### Buy Tokens & Join Communities
+1. Browse available creator chat rooms in the left sidebar
+2. Search for your favorite creators using the search bar
+3. Click on a chat room to view token info and price chart
+4. Open the trade panel on the right side
+5. Choose "Buy" mode and enter the amount (or use presets)
+6. Adjust slippage tolerance if needed
 7. Click "Swap" and approve the transaction in your wallet
 
-### Create a New Chat Room
+#### Send Messages & Engage
+1. Once you own tokens, you can participate in the chat
+2. Type your message with the trade amount
+3. Your message is recorded on-chain with the transaction
+4. Watch your tokens appreciate as the creator gains popularity
 
-1. Click the "+" button in the sidebar
-2. Enter the token's contract address
-3. Provide a room name and description (optional)
-4. Click "Create" to establish the room
+#### Manage Your Holdings
+1. View your token balance in real-time
+2. Check price charts with OHLC data
+3. Sell tokens anytime using the "Sell" mode
+4. Customize trading settings (slippage, priority fees, presets)
 
 ### Customize Your Profile
-
 1. Click your wallet address in the top navigation
 2. Select "Profile Settings"
 3. Upload an avatar, set a nickname, and add a bio
-4. Save your changes
+4. Save your changes to personalize your presence
 
 ## API Routes
 
@@ -298,95 +257,12 @@ Customize your trading experience in the Trade Settings Panel:
 - **Buy Presets:** Quick SOL amounts for buying (default: 0.1, 0.5, 1.0, 5.0)
 - **Sell Presets:** Quick percentages for selling (default: 25%, 50%, 75%, 100%)
 
-### Rate Limiting
-
-Adjust rate limits in `middleware.ts`:
-
-```typescript
-const RATE_LIMIT_GENERAL = 100;    // requests per minute
-const RATE_LIMIT_PRICE = 60;       // price update requests per minute
-```
-
-### Message Retention
-
-Configure message retention in chat settings:
-
-```typescript
-const MAX_MESSAGES_PER_ROOM = 500;
-const MESSAGE_RETENTION_HOURS = 24;
-```
-
-## Development
-
-### Running Tests
-
-```bash
-npm run lint        # Run ESLint
-npm run build       # Test production build
-```
-
-### Building for Production
-
-```bash
-npm run build
-npm run start
-```
-
-### Environment Modes
-
-- **Development:** `npm run dev` - Hot reload with Turbopack
-- **Production:** `npm run build && npm run start` - Optimized build
-- **Popup Mode:** Add `?popup=true` query parameter for embedded chat-only view
-
-## Performance Optimization
-
 - **Message Caching:** Maximum 500 messages per room with 24-hour retention
 - **Token Metadata Caching:** Multi-layer cache (memory + database)
-- **Price History Aggregation:** 1-minute interval OHLC data
+- **Price History Aggregation:** 1-minute interval data
 - **Connection Pooling:** Reusable Solana connection instances
 - **Image Optimization:** Proxy service with fallback mechanisms
 - **Real-time Subscriptions:** Efficient Supabase channel management
-
-## Security Considerations
-
-1. **Never commit `.env` files** - Use `.env.local` for local development
-2. **Protect JWT secrets** - Keep `JWT_SECRET` secure and rotate regularly
-3. **Use secure RPCs** - Prefer authenticated RPC endpoints over public ones
-4. **Validate transactions** - Always simulate transactions before execution
-5. **Rate limit APIs** - Implement and monitor rate limits on all endpoints
-6. **Verify signatures** - Validate wallet signatures for authentication
-
-## Troubleshooting
-
-### Wallet Connection Issues
-- Ensure your wallet extension is installed and unlocked
-- Clear browser cache and try reconnecting
-- Check that you're on the correct Solana network (Mainnet)
-
-### Transaction Failures
-- Increase slippage tolerance for volatile tokens
-- Raise priority fee during network congestion
-- Verify sufficient SOL balance for transaction fees
-
-### Price Data Not Loading
-- Check RPC endpoint connectivity in `.env.local`
-- Verify Supabase connection and API keys
-- Monitor RPC stats at `/api/rpc-stats`
-
-### Real-time Messages Not Appearing
-- Confirm Supabase Realtime is enabled in your project
-- Check browser console for WebSocket connection errors
-- Verify message_cache table subscriptions are active
-
-## Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## License
 
@@ -394,20 +270,112 @@ This project is private and proprietary. All rights reserved.
 
 ## Support
 
-For questions, issues, or feature requests, please:
-- Open an issue on GitHub
-- Contact the development team
-- Check the documentation in `/docs` (if available)
+## Why Buyve?
+
+<div align="center">
+
+### Traditional Tips vs. Buyve Tokens
+
+</div>
+
+| Feature | 💸 Traditional Tips | 🪙 Buyve Tokens |
+|---------|-------------------|----------------|
+| **Value Retention** | ❌ Disposable - gone after sending | ✅ Owned asset with appreciation potential |
+| **Alignment** | ❌ No benefit from creator success | ✅ Token value tied to creator popularity |
+| **Platform Fees** | ❌ 30-50% platform cut | ✅ 0.69% blockchain fee |
+| **Ownership** | ❌ No stake in community | ✅ Stakeholder & community member |
+| **Permanence** | ❌ Ephemeral transaction | ✅ On-chain forever on Solana |
+| **Tradability** | ❌ Cannot resell or trade | ✅ Trade anytime on DEXs |
+| **Speculation** | ❌ No investment upside | ✅ Potential for profit |
+
+### Competitive Advantages
+
+<table>
+<tr>
+<td width="50%">
+
+**🏗️ Infrastructure Play**
+- Not competing with streaming platforms
+- Enhancing existing ecosystems
+- Platform-agnostic integration
+
+</td>
+<td width="50%">
+
+**📈 Network Effects**
+- More creators = More value
+- More fans = Higher liquidity
+- Self-reinforcing growth loop
+
+</td>
+</tr>
+<tr>
+<td>
+
+**💹 Speculation Layer**
+- Trade creator tokens like stocks
+- Price discovery through markets
+- Fan investing in creator success
+
+</td>
+<td>
+
+**🔗 On-Chain Social Graph**
+- Permanent interaction records
+- Verifiable community membership
+- Transparent transaction history
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="center">
+
+**🌐 Multi-Platform Compatibility**
+Works across YouTube, Twitch, OnlyFans, Kick, and dozens more
+
+</td>
+</tr>
+</table>
+
+*✅ Completed | 🔄 In Progress | ⏳ Planned*
 
 ## Acknowledgments
 
-- [Solana](https://solana.com/) - High-performance blockchain
-- [Jupiter](https://jup.ag/) - DEX aggregation protocol
-- [Supabase](https://supabase.com/) - Backend infrastructure
-- [Next.js](https://nextjs.org/) - React framework
+Built on the shoulders of giants:
+- [Solana](https://solana.com/) - The world's fastest blockchain
+- [Jupiter](https://jup.ag/) - Best DEX aggregator on Solana
+- [Supabase](https://supabase.com/) - Open-source Firebase alternative
+- [Next.js](https://nextjs.org/) - The React framework for production
 - [Metaplex](https://www.metaplex.com/) - NFT and token metadata standard
-- [shadcn/ui](https://ui.shadcn.com/) - UI component library
+- [shadcn/ui](https://ui.shadcn.com/) - Beautiful component library
+
+Inspired by the creator economy revolution and built with passion for the Solana ecosystem.
 
 ---
 
-Built with passion for the Solana ecosystem.
+<div align="center">
+
+## Join the Revolution
+
+### **Buy the Buyve. Keep the Buyve.**
+
+Transform how you support creators. Own the moment. Share the vibe.
+
+<br>
+
+[![Start Trading](https://img.shields.io/badge/🚀_Start_Trading-Visit_Buyve-blueviolet?style=for-the-badge&labelColor=000000)](https://buyve.app/trade)
+[![Create Chat Room](https://img.shields.io/badge/💬_Create_Chat-For_Creators-success?style=for-the-badge&labelColor=000000)](https://buyve.app/trade)
+
+<br>
+
+**The future of creator support is on-chain.**
+
+*Built with ❤️ for the Solana ecosystem and the creator economy revolution.*
+
+<br>
+
+---
+
+**Copyright © 2025 Buyve. All rights reserved.**
+
+</div>
