@@ -20,7 +20,8 @@ class JupiterTokenListCache {
   private fetchPromise: Promise<void> | null = null;
 
   async getToken(tokenAddress: string): Promise<JupiterTokenMetadata | null> {
-    await this.ensureCache();
+    // Start cache fetch in background (non-blocking)
+    this.ensureCache();
     return this.cache?.get(tokenAddress) || null;
   }
 
