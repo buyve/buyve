@@ -57,29 +57,30 @@ async function pollTransaction(
 ): Promise<boolean> {
   const startTime = Date.now();
   let attempts = 0;
-  
+
   // Progressive delays: fast initially, then slower
   const delays = [500, 500, 1000, 1000, 2000, 2000, 3000, 3000, 5000];
-  
+
   while (Date.now() - startTime < timeout) {
     attempts++;
-    
+    const delay = delays[Math.min(attempts - 1, delays.length - 1)];
+
     try {
       const status = await connection.getSignatureStatus(signature);
-      
-      if (status?.value?.confirmationStatus === commitment || 
+
+      if (status?.value?.confirmationStatus === commitment ||
           status?.value?.confirmationStatus === 'finalized') {
         if (status.value.err) {
           throw new Error(`Transaction failed: ${JSON.stringify(status.value.err)}`);
         }
-        
+
         confirmationMetrics.record({
           method: 'polling',
           attempts,
           timeMs: Date.now() - startTime,
           success: true
         });
-        
+
         return true;
       }
     } catch (error) {
@@ -95,12 +96,11 @@ async function pollTransaction(
         throw error;
       }
     }
-    
+
     // Wait with progressive delay
-    const delay = delays[Math.min(attempts - 1, delays.length - 1)];
     await new Promise(resolve => setTimeout(resolve, delay));
   }
-  
+
   confirmationMetrics.record({
     method: 'polling',
     attempts,
@@ -108,7 +108,7 @@ async function pollTransaction(
     success: false,
     error: 'Timeout'
   });
-  
+
   return false;
 }
 
@@ -122,11 +122,11 @@ async function confirmViaWebSocket(
   commitment: Commitment = 'confirmed'
 ): Promise<boolean> {
   const startTime = Date.now();
-  
+
   return new Promise<boolean>((resolve, reject) => {
     let subscriptionId: number | null = null;
     let timeoutId: NodeJS.Timeout | null = null;
-    
+
     const cleanup = () => {
       if (subscriptionId !== null) {
         connection.removeSignatureListener(subscriptionId);
@@ -135,18 +135,19 @@ async function confirmViaWebSocket(
         clearTimeout(timeoutId);
       }
     };
-    
+
     try {
       subscriptionId = connection.onSignature(
         signature,
         (result) => {
+          const elapsed = Date.now() - startTime;
           cleanup();
-          
+
           if (result.err) {
             confirmationMetrics.record({
               method: 'websocket',
               attempts: 1,
-              timeMs: Date.now() - startTime,
+              timeMs: elapsed,
               success: false,
               error: JSON.stringify(result.err)
             });
@@ -155,7 +156,7 @@ async function confirmViaWebSocket(
             confirmationMetrics.record({
               method: 'websocket',
               attempts: 1,
-              timeMs: Date.now() - startTime,
+              timeMs: elapsed,
               success: true
             });
             resolve(true);
@@ -163,26 +164,28 @@ async function confirmViaWebSocket(
         },
         commitment
       );
-      
+
       // Set timeout
       timeoutId = setTimeout(() => {
+        const elapsed = Date.now() - startTime;
         cleanup();
         confirmationMetrics.record({
           method: 'websocket',
           attempts: 1,
-          timeMs: Date.now() - startTime,
+          timeMs: elapsed,
           success: false,
           error: 'WebSocket timeout'
         });
         reject(new Error('WebSocket confirmation timeout'));
       }, timeout);
-      
+
     } catch (error) {
+      const elapsed = Date.now() - startTime;
       cleanup();
       confirmationMetrics.record({
         method: 'websocket',
         attempts: 1,
-        timeMs: Date.now() - startTime,
+        timeMs: elapsed,
         success: false,
         error: error instanceof Error ? error.message : 'WebSocket error'
       });
@@ -209,24 +212,24 @@ export async function confirmTransactionHybrid(
     commitment = 'confirmed',
     useWebSocket = true
   } = options;
-  
+
   // If WebSocket is disabled, use polling only
   if (!useWebSocket) {
     return pollTransaction(connection, signature, timeout, commitment);
   }
-  
+
   try {
     // Race between WebSocket and polling
     const result = await Promise.race([
       confirmViaWebSocket(connection, signature, timeout * 0.8, commitment),
       pollTransaction(connection, signature, timeout, commitment)
     ]);
-    
+
     return result;
   } catch (error) {
     // If both fail, try one more time with polling
-    console.warn('Hybrid confirmation failed, retrying with polling only:', error);
-    return pollTransaction(connection, signature, timeout / 2, commitment);
+    const result = await pollTransaction(connection, signature, timeout / 2, commitment);
+    return result;
   }
 }
 
@@ -254,4 +257,49 @@ export function createAlchemyConnection(rpcUrl: string): Connection {
  */
 export function getConfirmationStats() {
   return confirmationMetrics.getStats();
+}
+
+/**
+ * Print detailed confirmation statistics to console
+ */
+export function printConfirmationStats() {
+  const stats = confirmationMetrics.getStats();
+
+  if (!stats) {
+    console.log(`\n📊 [STATS] No confirmation data available yet\n`);
+    return;
+  }
+
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`📊 [STATS] Confirmation Performance Statistics`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`\n📈 Total Confirmations: ${stats.total}`);
+
+  if (stats.websocket.count > 0) {
+    console.log(`\n🎧 WebSocket Method:`);
+    console.log(`   ├─ Count: ${stats.websocket.count}`);
+    console.log(`   ├─ Success Rate: ${(stats.websocket.successRate * 100).toFixed(1)}%`);
+    console.log(`   ├─ Average Time: ${Math.round(stats.websocket.avgTime)}ms`);
+    console.log(`   └─ Average Attempts: ${stats.websocket.avgAttempts.toFixed(1)}`);
+  }
+
+  if (stats.polling.count > 0) {
+    console.log(`\n🔄 Polling Method:`);
+    console.log(`   ├─ Count: ${stats.polling.count}`);
+    console.log(`   ├─ Success Rate: ${(stats.polling.successRate * 100).toFixed(1)}%`);
+    console.log(`   ├─ Average Time: ${Math.round(stats.polling.avgTime)}ms`);
+    console.log(`   └─ Average Attempts: ${stats.polling.avgAttempts.toFixed(1)}`);
+  }
+
+  if (stats.websocket.count > 0 && stats.polling.count > 0) {
+    const speedup = ((stats.polling.avgTime - stats.websocket.avgTime) / stats.polling.avgTime * 100);
+    console.log(`\n⚡ Performance:`);
+    if (speedup > 0) {
+      console.log(`   └─ WebSocket is ${speedup.toFixed(1)}% faster than Polling`);
+    } else {
+      console.log(`   └─ Polling is ${(-speedup).toFixed(1)}% faster than WebSocket`);
+    }
+  }
+
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 }

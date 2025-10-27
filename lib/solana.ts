@@ -224,6 +224,23 @@ export async function getBlockhashConnection(network?: SolanaNetwork): Promise<C
   }
 }
 
+// Create Helius connection with WebSocket support
+export function createHeliusConnection(apiKey?: string): Connection {
+  const heliusApiKey = apiKey || 'd0c461b2-279b-41ed-9a00-93952a97afd0';
+  const httpEndpoint = `https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`;
+  const wsEndpoint = `wss://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`;
+
+  return new Connection(httpEndpoint, {
+    commitment: 'confirmed',
+    wsEndpoint: wsEndpoint,
+    confirmTransactionInitialTimeout: 90000,
+    disableRetryOnRateLimit: false,
+    httpHeaders: {
+      'User-Agent': 'SolanaSwapChat/1.0',
+    },
+  });
+}
+
 // Invalidate connection cache (use when issues occur)
 export function invalidateConnectionCache(): void {
   connectionCache = null;

@@ -21,6 +21,7 @@ import {
   TransactionMessage,
   VersionedTransaction,
 } from '@solana/web3.js';
+import { confirmTransactionHybrid } from '@/lib/transaction-confirmation';
 
 // 🎯 Fee settings
 const FEE_RECIPIENT_ADDRESS = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
@@ -479,24 +480,24 @@ export default function ChatInput({ roomId }: Props) {
       
       while (retryCount < maxRetries) {
         try {
-          // 🎯 Use blockhash-dedicated connection function
-          const { getBlockhashConnection } = await import('@/lib/solana');
-          stableConnection = await getBlockhashConnection();
-          
-                      // Use more stable 'finalized' commitment
+          // 🎯 Use Helius connection with WebSocket support
+          const { createHeliusConnection } = await import('@/lib/solana');
+          stableConnection = createHeliusConnection();
+
+          // Use more stable 'finalized' commitment
           const latestBlockhash = await stableConnection.getLatestBlockhash('finalized');
           blockhash = latestBlockhash.blockhash;
           break;
         } catch (rpcError: unknown) {
           retryCount++;
-          
+
           if (retryCount >= maxRetries) {
             const errorMessage = rpcError instanceof Error ? rpcError.message : String(rpcError);
             throw new Error(`Blockchain connection failed: ${errorMessage}`);
           }
-          
-                      // Brief wait before retry (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1)));
+
+          // Brief wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1)));
         }
       }
 
@@ -598,14 +599,28 @@ export default function ChatInput({ roomId }: Props) {
       // Calculate and display swap information
       const inputAmount = formatTokenAmount(quote.inAmount, tokenPairInfo.inputTokenInfo.decimals);
       const outputAmount = formatTokenAmount(quote.outAmount, tokenPairInfo.outputTokenInfo.decimals);
-      
+
       // Swap execution toast
       toast.loading(`swap ${inputAmount} ${tokenPairInfo.inputTokenInfo.symbol} → ${outputAmount} ${tokenPairInfo.outputTokenInfo.symbol}`, { id: 'swap' });
+
+      // 🔧 CRITICAL FIX: Refresh blockhash right before signing to prevent expiration
+      try {
+        const freshBlockhash = await stableConnection.getLatestBlockhash('finalized');
+        blockhash = freshBlockhash.blockhash;
+
+        // Update transaction with fresh blockhash
+        if (transactionForSigning instanceof Transaction) {
+          transactionForSigning.recentBlockhash = blockhash;
+        }
+      } catch (refreshError) {
+        // Continue with existing blockhash if refresh fails
+      }
 
       // 4) Sign and send transaction (using same connection)
       const signedTransaction = await signTransaction(
         transactionForSigning as Parameters<typeof signTransaction>[0]
       );
+
       const txId = await stableConnection.sendRawTransaction(signedTransaction.serialize(), {
         skipPreflight: false,
         preflightCommitment: 'finalized', // use same commitment as blockhash
@@ -641,24 +656,18 @@ export default function ChatInput({ roomId }: Props) {
 
       // 5) Transaction confirmation and chat bubble display
       toast.loading("Confirming transaction...", { id: 'swap' });
-      
-      // Transaction confirmation without using WebSocket
+
+      // Transaction confirmation using Hybrid approach (WebSocket + Polling)
       let confirmed = false;
-      let attempts = 0;
-      const maxAttempts = 30; // try for 30 seconds
-      
-      while (!confirmed && attempts < maxAttempts) {
-        try {
-          const status = await connection.getSignatureStatus(txId);
-          if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
-            confirmed = true;
-            break;
-          }
-        } catch {
-        }
-        
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 1000)); // wait 1 second
+
+      try {
+        confirmed = await confirmTransactionHybrid(stableConnection, txId, {
+          timeout: 30000,
+          commitment: 'confirmed',
+          useWebSocket: true
+        });
+      } catch (confirmError) {
+        // Continue even if confirmation fails (transaction might still be valid)
       }
       
       // Display chat bubble after transaction confirmation
@@ -749,8 +758,6 @@ export default function ChatInput({ roomId }: Props) {
       clearError();
       
     } catch (err: unknown) {
-      console.error('Swap execution error:', err);
-
       let errorMessage = 'An error occurred during swap execution';
       const errorString = err instanceof Error ? err.message : String(err);
 
