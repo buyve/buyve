@@ -19,7 +19,7 @@ interface CreateChatRoomDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const PAYMENT_WALLET = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
+const PAYMENT_WALLET = 'Buy1e4vz1Y823VxvZ1KXHCGzDw8AFh93nXcSSayetEYB';
 const REQUIRED_PAYMENT = 0.001; // SOL
 
 export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatRoomDialogProps) {
