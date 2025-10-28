@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useWallet } from '@/providers/WalletProvider';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { getStableConnection } from '@/lib/solana';
+import { getBlockhashConnection } from '@/lib/solana';
 
 interface CreateChatRoomDialogProps {
   open: boolean;
@@ -140,10 +140,10 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
 
   const sendPaymentTransaction = async (): Promise<string | null> => {
     try {
-      const connection = await getStableConnection();
+      const connection = await getBlockhashConnection();
       const fromPubkey = new PublicKey(address!);
       const toPubkey = new PublicKey(PAYMENT_WALLET);
-      
+
       // Create transaction
       const transaction = new Transaction().add(
         SystemProgram.transfer({
@@ -154,7 +154,7 @@ export default function CreateChatRoomDialog({ open, onOpenChange }: CreateChatR
       );
 
       // Get latest blockhash
-      const { blockhash } = await connection.getLatestBlockhash();
+      const { blockhash } = await connection.getLatestBlockhash('finalized');
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = fromPubkey;
 
