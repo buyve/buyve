@@ -17,7 +17,7 @@ import { extractMemoFromTransaction } from '@/lib/memo';
 import { confirmTransactionHybrid, createAlchemyConnection, getConfirmationStats } from '@/lib/transaction-confirmation';
 
 // Fee configuration (automatically handled by Jupiter API)
-const FEE_RECIPIENT_ADDRESS = 'Buy1e4vz1Y823VxvZ1KXHCGzDw8AFh93nXcSSayetEYB';
+const FEE_RECIPIENT_ADDRESS = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
 const FEE_RATE = 0.0069;
 const PLATFORM_FEE_BPS = Math.round(FEE_RATE * 10000);
 

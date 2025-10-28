@@ -24,7 +24,7 @@ import {
 import { confirmTransactionHybrid } from '@/lib/transaction-confirmation';
 
 // 🎯 Fee settings
-const FEE_RECIPIENT_ADDRESS = 'Buy1e4vz1Y823VxvZ1KXHCGzDw8AFh93nXcSSayetEYB';
+const FEE_RECIPIENT_ADDRESS = '9YGfNLAiVNWbkgi9jFunyqQ1Q35yirSEFYsKLN6PP1DG';
 const FEE_RATE = 0.0069; // 0.69%
 const PLATFORM_FEE_BPS = Math.round(FEE_RATE * 10000); // 69 bps
 
