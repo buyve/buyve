@@ -126,6 +126,11 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
     updateSettings({ quantity });
   };
 
+  // Handle preset click (now without unit since it's always displayed)
+  const handlePresetClick = (preset: string) => {
+    updateSettings({ quantity: preset });
+  };
+
   // Change advanced settings
   const handleSlippageChange = (slippage: string) => {
     updateSettings({ slippage });
@@ -273,7 +278,7 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
                     height: '25px',
                     boxShadow: '2px 2px 0px 0px rgba(0,0,0,1) !important'
                   }}
-                  onClick={() => handleQuantityChange(preset)}
+                  onClick={() => handlePresetClick(preset)}
                 >
                   {settings.mode === 'sell' ? `${preset}%` : preset}
                 </Badge>
@@ -282,13 +287,13 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
           )}
         </div>
 
-        {/* Quantity input */}
-        <div className="w-full">
-          <Input 
-            placeholder={settings.mode === 'buy' ? 'Enter SOL amount' : 'Enter percentage (%)'}
+        {/* Quantity input with fixed suffix */}
+        <div className="w-full relative">
+          <Input
+            placeholder={settings.mode === 'buy' ? 'Enter amount' : 'Enter percentage'}
             value={settings.quantity}
             onChange={(e) => handleQuantityChange(e.target.value)}
-            className="w-full text-base font-medium border text-white placeholder-gray-400"
+            className="w-full text-base font-medium border text-white placeholder-gray-400 pr-12"
             style={{
               backgroundColor: 'oklch(0.2393 0 0)',
               borderColor: 'rgb(0, 0, 0)',
@@ -298,6 +303,9 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
               height: '25px'
             }}
           />
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm font-semibold text-gray-400 pointer-events-none">
+            {settings.mode === 'buy' ? 'SOL' : '%'}
+          </div>
         </div>
 
         {/* Advanced settings */}
@@ -415,13 +423,16 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
             <Input
                 value={settings.quantity}
                 onChange={(e) => handleQuantityChange(e.target.value)}
-                placeholder={settings.mode === 'buy' ? 'Enter SOL amount' : 'Enter percentage (%)'}
-                className="w-full h-12 text-lg font-medium border-2 focus:ring-2 focus:ring-blue-500 pr-14 text-white placeholder-gray-400"
+                placeholder={settings.mode === 'buy' ? 'Enter amount' : 'Enter percentage'}
+                className="w-full h-12 text-lg font-medium border-2 focus:ring-2 focus:ring-blue-500 pr-20 text-white placeholder-gray-400"
                 style={{ backgroundColor: 'oklch(0.2393 0 0)', borderColor: 'rgb(0, 0, 0)', borderRadius: '0' }}
               />
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+              <span className="text-base font-semibold text-gray-400">
+                {settings.mode === 'buy' ? 'SOL' : '%'}
+              </span>
               {settings.mode === 'buy' ? (
-                <TokenAvatar 
+                <TokenAvatar
                   key={`buy-sol-${settings.mode}`}
                   tokenAddress="So11111111111111111111111111111111111111112"
                   tokenName="SOL"
@@ -527,7 +538,7 @@ export default function TradeSettingsPanel({ mobile = false }: Props) {
                       : 'rgb(0, 0, 0)',
                     borderRadius: '0'
                   }}
-                  onClick={() => handleQuantityChange(preset)}
+                  onClick={() => handlePresetClick(preset)}
                 >
                   {settings.mode === 'sell' ? `${preset}%` : preset}
                 </Button>

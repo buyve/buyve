@@ -2,11 +2,12 @@
 
 import { useCallback, useState } from 'react';
 import { useWalletAdapter } from './useWalletAdapter';
-import { 
+import {
   Transaction,
   TransactionInstruction,
   PublicKey,
   Connection,
+  SendTransactionError,
 } from '@solana/web3.js';
 // SPL Token features are implemented separately
 import { getStableConnection } from '@/lib/solana';
@@ -222,9 +223,7 @@ export function useSwap() {
               commitment: 'confirmed',
               useWebSocket: true
             });
-
           } catch (error) {
-            console.error('Hybrid confirmation error:', error);
             // Fallback: retry with existing connection
             confirmed = await confirmTransactionHybrid(connection, txId, {
               timeout: 15000,
@@ -241,9 +240,7 @@ export function useSwap() {
           });
         }
 
-
         if (!confirmed) {
-          console.warn('Transaction confirmation timeout, but may still succeed');
           // Continue (likely succeeded anyway)
         }
 
@@ -277,7 +274,7 @@ export function useSwap() {
                     content: `✅ ${cleanMemo}`,
                   });
                 } catch (addError) {
-                  // Ignore chat message add errors
+                  // Silent fail
                 }
               }
             }
@@ -294,7 +291,7 @@ export function useSwap() {
                 content: `✅ ${memo.trim()}`,
               });
             } catch (fallbackError) {
-              // Ignore fallback message errors
+              // Silent fail
             }
           }
         }
@@ -310,9 +307,50 @@ export function useSwap() {
 
 
     } catch (error) {
-      let errorMessage = 'Failed to execute swap';
 
-      if (error instanceof Error) {
+      let errorMessage = 'Failed to execute swap';
+      const errorString = error instanceof Error ? error.message : String(error);
+
+      // 🎯 SendTransactionError 처리 (온체인 실패)
+      if (error instanceof SendTransactionError) {
+        try {
+          const connection = await getStableConnection();
+          const logs = await (error as any).getLogs?.(connection);
+
+          // Jupiter 에러 코드 파싱
+          const jupiterErrorLog = logs?.find((log: string) => log.includes('JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 failed'));
+
+          if (jupiterErrorLog) {
+            const errorCodeMatch = jupiterErrorLog.match(/error: (0x[0-9a-fA-F]+)/);
+            if (errorCodeMatch) {
+              const errorCode = errorCodeMatch[1];
+              const errorCodeDec = parseInt(errorCode, 16);
+
+              // 알려진 Jupiter 에러 코드 (Jupiter Documentation 기반)
+              if (errorCode === '0x1788' || errorCodeDec === 6024) {
+                errorMessage = 'Insufficient funds: Not enough balance for swap, transaction fees, or rent. Please check your wallet balance.';
+              } else if (errorCode === '0x1771' || errorCodeDec === 6001) {
+                errorMessage = 'Slippage tolerance exceeded. Try increasing slippage or use dynamic slippage.';
+              } else if (errorCode === '0x1779' || errorCodeDec === 6009) {
+                errorMessage = 'Token ledger not found. The token account may not exist.';
+              } else if (errorCode === '0x177e' || errorCodeDec === 6014) {
+                errorMessage = 'Incorrect token program: Cannot charge platform fees on Token2022 tokens.';
+              } else if (errorCode === '0x1781' || errorCodeDec === 6017) {
+                errorMessage = 'Exact output amount not matched. Similar to slippage issue.';
+              } else if (errorCode === '0x1789' || errorCodeDec === 6025) {
+                errorMessage = 'Invalid token account. Please check the token accounts.';
+              } else {
+                errorMessage = `Jupiter swap failed with error code ${errorCode} (decimal: ${errorCodeDec}). Check Jupiter docs for details.`;
+              }
+            }
+          }
+        } catch (logError) {
+          // Silent fail
+        }
+      }
+
+      // 일반 에러 메시지 처리
+      if (errorMessage === 'Failed to execute swap' && error instanceof Error) {
         if (error.message.includes('insufficient funds')) {
           errorMessage = 'Insufficient balance.';
         } else if (error.message.includes('slippage')) {
@@ -323,6 +361,14 @@ export function useSwap() {
           errorMessage = 'Transaction signature verification failed. Please try again.';
         } else if (error.message.includes('Transaction too large')) {
           errorMessage = 'Transaction is too large. Please shorten the memo or try again.';
+        } else if (errorString.includes('0x1')) {
+          // 0x로 시작하는 에러 코드 감지
+          const hexMatch = errorString.match(/0x[0-9a-fA-F]+/);
+          if (hexMatch) {
+            errorMessage = `Transaction failed with error code ${hexMatch[0]}`;
+          } else {
+            errorMessage = error.message;
+          }
         } else {
           errorMessage = error.message;
         }

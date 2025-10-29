@@ -204,12 +204,13 @@ export default function ChatInput({ roomId }: Props) {
     };
 
     const tokenSymbol = selectedToken.symbol || extractTokenSymbol(selectedToken.name);
-    
+
+    // 🔧 Default to 6 decimals (will be updated from chain data in Sell mode)
     const customTokenInfo = {
       address: selectedToken.contractAddress,
       symbol: tokenSymbol,
       name: selectedToken.name,
-              decimals: 6, // Most SPL tokens have 6 decimals
+      decimals: 6, // Default, will be overridden with actual value from chain
     };
 
     return {
@@ -217,7 +218,7 @@ export default function ChatInput({ roomId }: Props) {
       outputMint: settings.mode === 'buy' ? selectedToken.contractAddress : SOL_TOKEN_ADDRESS,
       inputTokenInfo: settings.mode === 'buy' ? TOKENS.SOL : customTokenInfo,
       outputTokenInfo: settings.mode === 'buy' ? customTokenInfo : TOKENS.SOL,
-              inputDecimals: settings.mode === 'buy' ? 9 : 6, // SOL: 9 decimals, most SPL: 6 decimals
+      inputDecimals: settings.mode === 'buy' ? 9 : 6, // Default 6, will be updated from chain
       buttonText: settings.mode === 'buy' ? `BUY ${tokenSymbol}` : `SELL ${tokenSymbol}`
     };
   };
@@ -268,10 +269,11 @@ export default function ChatInput({ roomId }: Props) {
       const memoText = message.trim();
 
     setIsLoading(true);
-    
+
     try {
+      // Parse quantity (units are displayed separately, so quantity is just the number)
       let quantity = parseFloat(settings.quantity);
-      
+
       if (isNaN(quantity) || quantity <= 0) {
         toast.error('Please enter a valid quantity');
         setIsLoading(false);
@@ -294,21 +296,31 @@ export default function ChatInput({ roomId }: Props) {
           const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
             mint: new PublicKey(tokenPairInfo.inputMint)
           });
-          
+
           if (tokenAccounts.value.length === 0) {
             toast.error('No balance for this token');
             setIsLoading(false);
             return;
           }
-          
-          const tokenBalance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
-          
+
+          const tokenAccountData = tokenAccounts.value[0].account.data.parsed.info.tokenAmount;
+          const tokenBalance = tokenAccountData.uiAmount;
+
+          // 🔧 CRITICAL: Get actual token decimals from account data
+          const actualDecimals = tokenAccountData.decimals;
+
+          // Update inputDecimals with actual value from chain if different
+          if (actualDecimals !== tokenPairInfo.inputDecimals) {
+            // Update the inputDecimals value for amount calculation
+            tokenPairInfo.inputDecimals = actualDecimals;
+          }
+
           if (!tokenBalance || tokenBalance <= 0) {
             toast.error('Insufficient token balance');
             setIsLoading(false);
             return;
           }
-          
+
           // Convert percentage to actual quantity
           quantity = (tokenBalance * quantity) / 100;
           
@@ -376,13 +388,13 @@ export default function ChatInput({ roomId }: Props) {
         body: JSON.stringify(swapPayload),
       });
       const swapData = await swapRes.json();
-      
+
               // Check if Swap response has errors
       if (swapData.error) {
         toast.error(`Swap request failed: ${swapData.error}`, { id: 'swap' });
         return;
       }
-      
+
               // Check if swapTransaction exists
       if (!swapData.swapTransaction) {
         toast.error('Swap transaction data not available', { id: 'swap' });
@@ -460,11 +472,128 @@ export default function ChatInput({ roomId }: Props) {
       if (settings.mode === 'buy') {
         const solAmount = quantity; // quantity already represents SOL in buy mode
         feeAmount = Math.floor(solAmount * FEE_RATE * 1e9);
+
+        // 💰 Buy 모드: SOL 잔액 확인
+        try {
+          const balance = await connection.getBalance(publicKey);
+
+          // 🔑 Rent-exempt balance for potential new token accounts
+          const RENT_EXEMPT_BALANCE = 2039280; // ~0.00203928 SOL per account
+          const TRANSACTION_FEE_BUFFER = 5000000; // 0.005 SOL for transaction fees
+
+          // Check if output token account exists
+          let needsOutputTokenAccount = false;
+          try {
+            const outputTokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+              mint: new PublicKey(tokenPairInfo.outputMint)
+            });
+            needsOutputTokenAccount = outputTokenAccounts.value.length === 0;
+          } catch (checkError) {
+            // Assume we need to create account if check fails
+            needsOutputTokenAccount = true;
+          }
+
+          const rentCost = needsOutputTokenAccount ? RENT_EXEMPT_BALANCE : 0;
+          const requiredSol = solAmount * 1e9 + feeAmount + rentCost + TRANSACTION_FEE_BUFFER;
+
+          if (balance < requiredSol) {
+            const breakdown = needsOutputTokenAccount
+              ? `Swap: ${solAmount.toFixed(6)} SOL + Fee: ${(feeAmount / 1e9).toFixed(6)} SOL + Rent: ${(rentCost / 1e9).toFixed(6)} SOL + Buffer: ${(TRANSACTION_FEE_BUFFER / 1e9).toFixed(6)} SOL`
+              : `Swap: ${solAmount.toFixed(6)} SOL + Fee: ${(feeAmount / 1e9).toFixed(6)} SOL + Buffer: ${(TRANSACTION_FEE_BUFFER / 1e9).toFixed(6)} SOL`;
+
+            toast.error(
+              `Insufficient SOL: Need ${(requiredSol / 1e9).toFixed(6)} SOL but have ${(balance / 1e9).toFixed(6)} SOL. ${breakdown}`,
+              { id: 'swap', duration: 5000 }
+            );
+            setIsLoading(false);
+            return;
+          }
+        } catch (balanceError) {
+          // Silent fail
+        }
       } else {
         // Sell mode: approximate fee based on expected SOL output
         const expectedOutputSol = parseFloat(formatTokenAmount(quote.outAmount, 9));
         if (!Number.isNaN(expectedOutputSol)) {
           feeAmount = Math.floor(expectedOutputSol * FEE_RATE * 1e9);
+        }
+
+        // 💰 Sell 모드: 토큰 잔액 확인 (가장 중요!)
+        try {
+          const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+            mint: new PublicKey(tokenPairInfo.inputMint)
+          });
+
+          const inputAmount = parseFloat(formatTokenAmount(quote.inAmount, tokenPairInfo.inputDecimals));
+
+          if (tokenAccounts.value.length === 0) {
+            toast.error(
+              `No ${tokenPairInfo.inputTokenInfo.symbol} token account found`,
+              { id: 'swap' }
+            );
+            setIsLoading(false);
+            return;
+          }
+
+          const tokenBalance = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+
+          if (!tokenBalance || tokenBalance < inputAmount) {
+            toast.error(
+              `Insufficient ${tokenPairInfo.inputTokenInfo.symbol}: You need ${inputAmount.toFixed(6)} but only have ${tokenBalance?.toFixed(6) || 0}`,
+              { id: 'swap' }
+            );
+            setIsLoading(false);
+            return;
+          }
+        } catch (tokenBalanceError) {
+          // Continue (will be checked again in simulation)
+        }
+
+        // 💰 Sell 모드: 트랜잭션 수수료용 SOL 확인
+        try {
+          const balance = await connection.getBalance(publicKey);
+
+          // 🔑 Rent-exempt balance for potential new token accounts
+          // Jupiter may create associated token accounts which require rent
+          const RENT_EXEMPT_BALANCE = 2039280; // ~0.00203928 SOL per account
+          const TRANSACTION_FEE_BUFFER = 10000000; // 0.01 SOL for transaction fees + buffer
+
+          // Check if output token account exists
+          let needsOutputTokenAccount = false;
+          try {
+            const outputTokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+              mint: new PublicKey(tokenPairInfo.outputMint)
+            });
+            needsOutputTokenAccount = outputTokenAccounts.value.length === 0;
+          } catch (checkError) {
+            // Assume we need to create account if check fails
+            needsOutputTokenAccount = true;
+          }
+
+          const rentCost = needsOutputTokenAccount ? RENT_EXEMPT_BALANCE : 0;
+
+          // 🔧 CRITICAL: In Sell mode, the platform fee is deducted BEFORE the swap
+          // This means we need MORE SOL than expected to cover:
+          // 1. Platform fee (deducted first from wallet)
+          // 2. Rent for new token account
+          // 3. Transaction fees
+          // The swap itself uses the token balance, not SOL
+          const requiredSol = feeAmount + rentCost + TRANSACTION_FEE_BUFFER;
+
+          if (balance < requiredSol) {
+            const breakdown = needsOutputTokenAccount
+              ? `Platform fee: ${(feeAmount / 1e9).toFixed(6)} SOL + Rent: ${(rentCost / 1e9).toFixed(6)} SOL + Buffer: ${(TRANSACTION_FEE_BUFFER / 1e9).toFixed(6)} SOL`
+              : `Platform fee: ${(feeAmount / 1e9).toFixed(6)} SOL + Buffer: ${(TRANSACTION_FEE_BUFFER / 1e9).toFixed(6)} SOL`;
+
+            toast.error(
+              `Insufficient SOL: Need ${(requiredSol / 1e9).toFixed(6)} SOL but have ${(balance / 1e9).toFixed(6)} SOL. ${breakdown}`,
+              { id: 'swap', duration: 5000 }
+            );
+            setIsLoading(false);
+            return;
+          }
+        } catch (balanceError) {
+          // Silent fail
         }
       }
 
@@ -547,11 +676,7 @@ export default function ChatInput({ roomId }: Props) {
           }
         }
 
-        const finalMessageSize = messageForSwap.serialize().length;
         transactionForSigning = new VersionedTransaction(messageForSwap);
-        if (finalMessageSize >= PACKET_DATA_SIZE_LIMIT) {
-          console.warn('Swap message size still high after adjustments', finalMessageSize);
-        }
 
         if (useAuxiliaryTransaction) {
           if (feeInstruction) {
@@ -648,9 +773,8 @@ export default function ChatInput({ roomId }: Props) {
               maxRetries: 3,
             }
           );
-
         } catch (auxError) {
-          console.error('Auxiliary transaction failed', auxError);
+          // Silent fail
         }
       }
 
@@ -672,7 +796,6 @@ export default function ChatInput({ roomId }: Props) {
       
       // Display chat bubble after transaction confirmation
       if (confirmed) {
-        
         try {
           // Calculate actual SOL amount traded (always save in SOL basis)
           let actualSolAmount: string;
@@ -683,7 +806,7 @@ export default function ChatInput({ roomId }: Props) {
             // Sell mode: received SOL amount (outputAmount)
             actualSolAmount = outputAmount;
           }
-          
+
           // Use addMessage directly to include txHash and immediately display memo text
           const messageData = {
             userId: 'user1',
@@ -694,10 +817,10 @@ export default function ChatInput({ roomId }: Props) {
             content: memoText || '', // save only user-entered memo text
             txHash: auxiliaryTxId || txId, // include transaction hash
           };
-          
+
           await addMessage(roomId, messageData);
-          
-        } catch {
+        } catch (msgError) {
+          // Silent fail
         }
         
         // Simple success toast
@@ -712,9 +835,8 @@ export default function ChatInput({ roomId }: Props) {
             }
           }
         );
-        
+
       } else {
-        
         try {
           // Calculate actual SOL amount traded (always save in SOL basis)
           let actualSolAmount: string;
@@ -725,7 +847,7 @@ export default function ChatInput({ roomId }: Props) {
             // Sell mode: received SOL amount (outputAmount)
             actualSolAmount = outputAmount;
           }
-          
+
           // Use addMessage directly to include txHash and immediately display memo text
           const messageData = {
             userId: 'user1',
@@ -736,9 +858,10 @@ export default function ChatInput({ roomId }: Props) {
             content: memoText || '', // save only user-entered memo text
             txHash: auxiliaryTxId || txId, // include transaction hash
           };
-          
+
           addMessage(roomId, messageData);
-        } catch {
+        } catch (msgError) {
+          // Silent fail
         }
         
         toast.warning(
@@ -756,7 +879,7 @@ export default function ChatInput({ roomId }: Props) {
       // ✅ Clear input field after completion
       setMessage('');
       clearError();
-      
+
     } catch (err: unknown) {
       let errorMessage = 'An error occurred during swap execution';
       const errorString = err instanceof Error ? err.message : String(err);
@@ -765,21 +888,54 @@ export default function ChatInput({ roomId }: Props) {
         try {
           // Retrieve detailed logs from the failed transaction for easier debugging
           const logs = await err.getLogs(connection);
-          console.error('Swap transaction logs:', logs);
-          const lastLog = [...logs].reverse().find((log) => log.trim().length > 0);
-          if (lastLog) {
-            errorMessage = lastLog;
-          } else {
-            const transactionError = err.transactionError;
-            if (transactionError?.message) {
-              errorMessage = transactionError.message;
+
+          // 🎯 Jupiter 에러 코드 파싱
+          const jupiterErrorLog = logs.find(log => log.includes('JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 failed'));
+
+          if (jupiterErrorLog) {
+            // 에러 코드 추출 (예: 0x1788)
+            const errorCodeMatch = jupiterErrorLog.match(/error: (0x[0-9a-fA-F]+)/);
+            if (errorCodeMatch) {
+              const errorCode = errorCodeMatch[1];
+              const errorCodeDec = parseInt(errorCode, 16);
+
+              // 🔍 알려진 Jupiter 에러 코드 매핑 (Jupiter Documentation 기반)
+              if (errorCode === '0x1788' || errorCodeDec === 6024) {
+                errorMessage = 'Insufficient funds: Not enough balance for swap, transaction fees, or rent. Please check your wallet balance.';
+              } else if (errorCode === '0x1771' || errorCodeDec === 6001) {
+                errorMessage = 'Slippage tolerance exceeded. Try increasing slippage or use dynamic slippage.';
+              } else if (errorCode === '0x1779' || errorCodeDec === 6009) {
+                errorMessage = 'Token ledger not found. The token account may not exist.';
+              } else if (errorCode === '0x177e' || errorCodeDec === 6014) {
+                errorMessage = 'Incorrect token program: Cannot charge platform fees on Token2022 tokens.';
+              } else if (errorCode === '0x1781' || errorCodeDec === 6017) {
+                errorMessage = 'Exact output amount not matched. Similar to slippage issue.';
+              } else if (errorCode === '0x1789' || errorCodeDec === 6025) {
+                errorMessage = 'Invalid token account. Please check the token accounts.';
+              } else {
+                errorMessage = `Jupiter swap failed with error code ${errorCode} (decimal: ${errorCodeDec}). Check Jupiter docs for details.`;
+              }
+            }
+          }
+
+          // 기본 로그 기반 에러 메시지 (Jupiter 에러가 아닌 경우)
+          if (errorMessage === 'An error occurred during swap execution') {
+            const lastLog = [...logs].reverse().find((log) => log.trim().length > 0);
+            if (lastLog) {
+              errorMessage = lastLog;
+            } else {
+              const transactionError = err.transactionError;
+              if (transactionError?.message) {
+                errorMessage = transactionError.message;
+              }
             }
           }
         } catch (logError) {
-          console.error('Failed to retrieve swap logs', logError);
+          // Silent fail
         }
       }
 
+      // 일반 에러 메시지 처리
       if (errorMessage === 'An error occurred during swap execution') {
         if (errorString.includes('403') || errorString.includes('Forbidden')) {
           errorMessage = 'RPC server access is restricted. Please try again later.';
@@ -787,6 +943,14 @@ export default function ChatInput({ roomId }: Props) {
           errorMessage = 'Blockchain connection failed. Please check your network.';
         } else if (errorString.includes('insufficient')) {
           errorMessage = 'Insufficient balance.';
+        } else if (errorString.includes('0x1')) {
+          // 0x로 시작하는 에러 코드 감지
+          const hexMatch = errorString.match(/0x[0-9a-fA-F]+/);
+          if (hexMatch) {
+            errorMessage = `Transaction failed with error code ${hexMatch[0]}`;
+          } else {
+            errorMessage = errorString;
+          }
         } else if (errorString) {
           errorMessage = errorString;
         }
