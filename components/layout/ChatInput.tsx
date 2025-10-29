@@ -837,36 +837,11 @@ export default function ChatInput({ roomId }: Props) {
         );
 
       } else {
-        try {
-          // Calculate actual SOL amount traded (always save in SOL basis)
-          let actualSolAmount: string;
-          if (settings.mode === 'buy') {
-            // Buy mode: input SOL amount
-            actualSolAmount = quantity.toString();
-          } else {
-            // Sell mode: received SOL amount (outputAmount)
-            actualSolAmount = outputAmount;
-          }
-
-          // Use addMessage directly to include txHash and immediately display memo text
-          const messageData = {
-            userId: 'user1',
-            userAddress: publicKey?.toString() || 'Unknown',
-            avatar: '⏱️',
-            tradeType: settings.mode as 'buy' | 'sell',
-            tradeAmount: actualSolAmount, // always SOL basis
-            content: memoText || '', // save only user-entered memo text
-            txHash: auxiliaryTxId || txId, // include transaction hash
-          };
-
-          addMessage(roomId, messageData);
-        } catch (msgError) {
-          // Silent fail
-        }
-        
-        toast.warning(
-          'Transaction sent but confirmation is delayed',
-          { 
+        // Transaction confirmation failed or timed out
+        // Do not create chat bubble for unconfirmed transactions
+        toast.error(
+          'Transaction confirmation failed or timed out',
+          {
             id: 'swap',
             action: {
               label: 'Check on Solscan',
