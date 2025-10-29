@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { CacheManager } from '@/lib/cache-manager';
+import { SessionManager } from '@/lib/session-manager';
 
 interface StorageFile {
   name: string;
@@ -115,14 +117,19 @@ export async function POST(request: NextRequest) {
       // 이미지는 업로드되었지만 프로필 업데이트 실패
       console.error('Failed to update profile:', profileError);
       return NextResponse.json(
-        { 
+        {
           error: 'Image uploaded but failed to update profile',
           avatar_url: publicUrl,
-          details: profileError.message 
+          details: profileError.message
         },
         { status: 500 }
       );
     }
+
+    // 프로필 캐시 무효화 (즉시 반영을 위해)
+    await CacheManager.invalidateUserData(walletAddress);
+    // 세션도 무효화
+    await SessionManager.invalidateSession(walletAddress);
 
     return NextResponse.json({
       success: true,

@@ -87,7 +87,7 @@ export async function createOrUpdateProfile(walletAddress: string, nickname?: st
       profileData.nickname = nickname;
     } else if (!existingProfile) {
       // Set default value only for new profiles without nickname
-      profileData.nickname = `User_${walletAddress.slice(0, 8)}`;
+      profileData.nickname = walletAddress.slice(0, 10);
     }
     
     const { data, error } = await supabase

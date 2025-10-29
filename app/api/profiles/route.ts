@@ -65,8 +65,8 @@ export async function GET(request: NextRequest) {
       profile
     }, {
       headers: {
-        // 프로필 데이터를 5분간 캐시
-        'Cache-Control': 'public, max-age=300, stale-while-revalidate=60'
+        // 프로필 데이터는 캐시하지 않음 (즉시 반영 필요)
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
       }
     });
 
