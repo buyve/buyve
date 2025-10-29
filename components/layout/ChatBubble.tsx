@@ -206,7 +206,7 @@ export default function ChatBubble({ message }: Props) {
                   }`}
                   style={{ boxShadow: 'none' }}
                 >
-                  {tradeType === 'sell' ? 'SELL' : 'BUY'} {amount} SOL
+                  {tradeType === 'sell' ? 'SELL' : 'BUY'} {parseFloat(amount).toFixed(1)} SOL
                 </Badge>
               )}
             </div>

@@ -114,7 +114,7 @@ export async function createOrUpdateProfile(walletAddress: string, nickname?: st
 // Generate authentication message
 export function generateAuthMessage(walletAddress: string): string {
   const timestamp = Date.now()
-  return `TradeChat Authentication\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\n\nSign this message to authenticate with TradeChat.`
+  return `Buyve Authentication\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}\n\nSign this message to authenticate with Buyve.`
 }
 
 // Create Supabase session with authentication token

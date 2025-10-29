@@ -65,9 +65,14 @@ function MobileWalletProfile() {
   const [tempAvatar, setTempAvatar] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [nicknameError, setNicknameError] = useState('');
 
   // Default avatar array
   const DEFAULT_AVATARS = ['👤', '🧑', '👩', '🤵', '👩‍💼', '🧑‍💼', '👨‍💼', '🧙‍♂️', '🧙‍♀️', '🥷'];
+
+  // Nickname length constraints
+  const MIN_NICKNAME_LENGTH = 2;
+  const MAX_NICKNAME_LENGTH = 10;
 
   // Update with latest profile info whenever dialog opens
   useEffect(() => {
@@ -81,20 +86,62 @@ function MobileWalletProfile() {
   const handleDialogOpen = useCallback(() => {
     setTempNickname(nickname || '');
     setTempAvatar(avatar || DEFAULT_AVATARS[0]);
+    setNicknameError('');
     setIsDialogOpen(true);
   }, [avatar, nickname]);
 
+  // Nickname change handler with validation
+  const handleNicknameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Allow empty nickname (will use default)
+    if (value === '') {
+      setTempNickname(value);
+      setNicknameError('');
+      return;
+    }
+
+    // Check length constraints
+    if (value.length < MIN_NICKNAME_LENGTH) {
+      setTempNickname(value);
+      setNicknameError(`Nickname must be at least ${MIN_NICKNAME_LENGTH} characters`);
+      return;
+    }
+
+    if (value.length > MAX_NICKNAME_LENGTH) {
+      setNicknameError(`Nickname cannot exceed ${MAX_NICKNAME_LENGTH} characters`);
+      return; // Don't update if exceeds max length
+    }
+
+    // Valid nickname
+    setTempNickname(value);
+    setNicknameError('');
+  }, []);
+
   // Save changes
   const handleSave = useCallback(async () => {
+    // Validate nickname before saving
+    if (tempNickname.trim() !== '' && tempNickname.length < MIN_NICKNAME_LENGTH) {
+      setNicknameError(`Nickname must be at least ${MIN_NICKNAME_LENGTH} characters`);
+      return;
+    }
+
+    if (tempNickname.length > MAX_NICKNAME_LENGTH) {
+      setNicknameError(`Nickname cannot exceed ${MAX_NICKNAME_LENGTH} characters`);
+      return;
+    }
+
     try {
       await updateProfile({
         nickname: tempNickname,
         avatar: tempAvatar
       });
       setIsDialogOpen(false);
+      setNicknameError('');
     } catch {
       // Close popup even if error occurs
       setIsDialogOpen(false);
+      setNicknameError('');
     }
   }, [tempNickname, tempAvatar, updateProfile]);
 
@@ -237,7 +284,7 @@ function MobileWalletProfile() {
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
         <button
-          className="group relative flex flex-col items-center justify-center gap-1 bg-transparent hover:bg-green-400 text-white hover:text-black transition-colors duration-150 font-bold h-full px-3 py-2 border-none outline-none"
+          className="group relative flex items-center justify-center bg-transparent hover:bg-green-400 text-white hover:text-black transition-colors duration-150 font-bold h-full px-3 py-2 border-none outline-none"
           style={{ boxShadow: 'none', border: 'none', background: 'transparent' }}
           onClick={handleDialogOpen}
           disabled={isConnecting}
@@ -245,9 +292,9 @@ function MobileWalletProfile() {
           <div className="relative group-hover:scale-110 transition-transform duration-200">
             <Avatar className="w-8 h-8" style={{ minWidth: '32px', minHeight: '32px', maxWidth: '32px', maxHeight: '32px', width: '32px', height: '32px', borderTopWidth: '0px', borderRightWidth: '0px', borderBottomWidth: '0px', borderLeftWidth: '0px', marginLeft: '0px' }}>
               {avatar?.startsWith('data:') || avatar?.startsWith('http') ? (
-                <img 
-                  src={avatar} 
-                  alt="Avatar" 
+                <img
+                  src={avatar}
+                  alt="Avatar"
                   className="w-full h-full object-cover"
                   style={{ borderRadius: '0px' }}
                 />
@@ -258,15 +305,6 @@ function MobileWalletProfile() {
               )}
             </Avatar>
           </div>
-          {nickname ? (
-            <span className="text-xs uppercase tracking-wide leading-none">
-              {nickname}
-            </span>
-          ) : (
-            <span className="text-xs tracking-wide leading-none">
-              {`${address?.slice(0, 4)}...${address?.slice(-4)}`}
-            </span>
-          )}
         </button>
       </DialogTrigger>
 
@@ -368,14 +406,26 @@ function MobileWalletProfile() {
 
                       {/* Nickname input */}
           <div className="space-y-2">
-                          <Label htmlFor="nickname" className="text-sm text-white">Nickname</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="nickname" className="text-sm text-white">Nickname</Label>
+              <span className={`text-xs ${tempNickname.length > MAX_NICKNAME_LENGTH ? 'text-red-400' : 'text-gray-300'}`}>
+                {tempNickname.length}/{MAX_NICKNAME_LENGTH}
+              </span>
+            </div>
             <Input
               id="nickname"
               value={tempNickname}
-              onChange={(e) => setTempNickname(e.target.value)}
-                              placeholder={address ? `Default: ${address.slice(0, 4)}...${address.slice(-4)}` : 'Enter nickname'}
-              className="border-2 border-black focus:border-black focus:ring-0 rounded-none bg-[oklch(0.2393_0_0)] text-white placeholder:text-gray-300 text-sm"
+              onChange={handleNicknameChange}
+              placeholder={address ? `Default: ${address.slice(0, 4)}...${address.slice(-4)}` : 'Enter nickname'}
+              className={`border-2 ${nicknameError ? 'border-red-500' : 'border-black'} focus:border-black focus:ring-0 rounded-none bg-[oklch(0.2393_0_0)] text-white placeholder:text-gray-300 text-sm`}
+              maxLength={MAX_NICKNAME_LENGTH + 10}
             />
+            {nicknameError && (
+              <p className="text-xs text-red-400 mt-1">{nicknameError}</p>
+            )}
+            <p className="text-xs text-gray-300">
+              Nickname must be {MIN_NICKNAME_LENGTH}-{MAX_NICKNAME_LENGTH} characters (or leave empty for default)
+            </p>
           </div>
 
                       {/* Wallet address display - allow line break on mobile */}

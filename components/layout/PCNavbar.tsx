@@ -227,6 +227,11 @@ function PCWalletProfile() {
   const [tempAvatar, setTempAvatar] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [nicknameError, setNicknameError] = useState('');
+
+  // Nickname length constraints
+  const MIN_NICKNAME_LENGTH = 2;
+  const MAX_NICKNAME_LENGTH = 10;
 
 
   // Update with latest profile info whenever dialog opens
@@ -242,22 +247,63 @@ function PCWalletProfile() {
   const handleDialogOpen = useCallback(() => {
     setTempNickname(nickname || '');
     setTempAvatar(avatar || '👤');
+    setNicknameError('');
     setIsDialogOpen(true);
   }, [avatar, nickname]);
 
+  // Nickname change handler with validation
+  const handleNicknameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Allow empty nickname (will use default)
+    if (value === '') {
+      setTempNickname(value);
+      setNicknameError('');
+      return;
+    }
+
+    // Check length constraints
+    if (value.length < MIN_NICKNAME_LENGTH) {
+      setTempNickname(value);
+      setNicknameError(`Nickname must be at least ${MIN_NICKNAME_LENGTH} characters`);
+      return;
+    }
+
+    if (value.length > MAX_NICKNAME_LENGTH) {
+      setNicknameError(`Nickname cannot exceed ${MAX_NICKNAME_LENGTH} characters`);
+      return; // Don't update if exceeds max length
+    }
+
+    // Valid nickname
+    setTempNickname(value);
+    setNicknameError('');
+  }, [MIN_NICKNAME_LENGTH, MAX_NICKNAME_LENGTH]);
+
   const handleSave = useCallback(async () => {
-    
+    // Validate nickname before saving
+    if (tempNickname.trim() !== '' && tempNickname.length < MIN_NICKNAME_LENGTH) {
+      setNicknameError(`Nickname must be at least ${MIN_NICKNAME_LENGTH} characters`);
+      return;
+    }
+
+    if (tempNickname.length > MAX_NICKNAME_LENGTH) {
+      setNicknameError(`Nickname cannot exceed ${MAX_NICKNAME_LENGTH} characters`);
+      return;
+    }
+
     try {
       await updateProfile({
         nickname: tempNickname,
         avatar: tempAvatar
       });
       setIsDialogOpen(false);
+      setNicknameError('');
     } catch {
       // Close popup even if error occurs
       setIsDialogOpen(false);
+      setNicknameError('');
     }
-  }, [tempNickname, tempAvatar, updateProfile]);
+  }, [tempNickname, tempAvatar, updateProfile, MIN_NICKNAME_LENGTH, MAX_NICKNAME_LENGTH]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -523,14 +569,26 @@ function PCWalletProfile() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="nickname" className="text-white">Nickname</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="nickname" className="text-white">Nickname</Label>
+              <span className={`text-xs ${tempNickname.length > MAX_NICKNAME_LENGTH ? 'text-red-400' : 'text-gray-300'}`}>
+                {tempNickname.length}/{MAX_NICKNAME_LENGTH}
+              </span>
+            </div>
             <Input
               id="nickname"
               value={tempNickname}
-              onChange={(e) => setTempNickname(e.target.value)}
+              onChange={handleNicknameChange}
               placeholder={address ? `Default: ${address.slice(0, 4)}...${address.slice(-4)}` : 'Enter your nickname'}
-              className="border-2 border-black focus:border-black focus:ring-0 rounded-none bg-[oklch(0.2393_0_0)] text-white placeholder:text-gray-300"
+              className={`border-2 ${nicknameError ? 'border-red-500' : 'border-black'} focus:border-black focus:ring-0 rounded-none bg-[oklch(0.2393_0_0)] text-white placeholder:text-gray-300`}
+              maxLength={MAX_NICKNAME_LENGTH + 10}
             />
+            {nicknameError && (
+              <p className="text-xs text-red-400 mt-1">{nicknameError}</p>
+            )}
+            <p className="text-xs text-gray-300">
+              Nickname must be {MIN_NICKNAME_LENGTH}-{MAX_NICKNAME_LENGTH} characters (or leave empty for default)
+            </p>
           </div>
 
           <div className="space-y-2">
